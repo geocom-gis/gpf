@@ -31,8 +31,10 @@ setup(
         long_description=read('README.rst'),
         author='Geocom Informatik AG / VertiGIS, Burgdorf, Switzerland',
         author_email='github@geocom.ch',
-        url='https://github.com/geocom-gis/gpf',
-        # download_url='https://github.com/geocom-gis/gpf/archive/gpf_v010.tar.gz',
+        project_urls={
+            'Source': 'https://github.com/geocom-gis/gpf',
+            'Documentation': 'https://gpf.readthedocs.io/'
+        },
         keywords=[
             'Geocom', 'GIS', 'GEONIS', 'tools', 'scripting', 'framework', 'spatial',
             'geospatial', 'geoprocessing', 'Esri', 'ArcGIS', 'ArcPy', 'VertiGIS'
