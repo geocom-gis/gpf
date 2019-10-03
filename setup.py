@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(
         name='gpf',
-        packages=find_packages(exclude=('tests',)),
+        packages=find_packages(exclude=('tests', 'apidoc')),
         version='0.1',
         license='Apache License 2.0',
         description='Scripting framework for ArcPy (Esri ArcGIS 10.6+).',
