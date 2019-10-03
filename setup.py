@@ -14,19 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
         name='gpf',
-        packages=['gpf'],
+        packages=find_packages(exclude=('tests',)),
         version='0.1',
         license='Apache License 2.0',
         description='Scripting framework for ArcPy (Esri ArcGIS 10.6+).',
         author='Geocom Informatik AG / VertiGIS, Burgdorf, Switzerland',
         author_email='github@geocom.ch',
         url='https://github.com/geocom-gis/gpf',
-        download_url='https://github.com/geocom-gis/gpf/archive/gpf_v010.tar.gz',
-        requires=['pytest'],
+        # download_url='https://github.com/geocom-gis/gpf/archive/gpf_v010.tar.gz',
         keywords=[
             'Geocom', 'GIS', 'GEONIS', 'tools', 'scripting', 'framework', 'spatial',
             'geospatial', 'geoprocessing', 'Esri', 'ArcGIS', 'ArcPy', 'VertiGIS'
