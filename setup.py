@@ -14,7 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from setuptools import setup, find_packages
+
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
 
 setup(
         name='gpf',
@@ -22,6 +28,7 @@ setup(
         version='0.1',
         license='Apache License 2.0',
         description='Scripting framework for ArcPy (Esri ArcGIS 10.6+).',
+        long_description=read('README.rst'),
         author='Geocom Informatik AG / VertiGIS, Burgdorf, Switzerland',
         author_email='github@geocom.ch',
         url='https://github.com/geocom-gis/gpf',
@@ -30,6 +37,7 @@ setup(
             'Geocom', 'GIS', 'GEONIS', 'tools', 'scripting', 'framework', 'spatial',
             'geospatial', 'geoprocessing', 'Esri', 'ArcGIS', 'ArcPy', 'VertiGIS'
         ],
+        python_requires='>=2.7.14, <3',
         classifiers=[
             'Development Status :: 4 - Beta',  # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
             'Intended Audience :: Developers',
