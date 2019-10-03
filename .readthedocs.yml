@@ -7,7 +7,8 @@ version: 2
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
-  configuration: apidoc/
+  builder: html
+  configuration: apidoc/source/conf.py
 
 # Build docs in additional formats such as PDF and ePub
 formats:
@@ -16,5 +17,6 @@ formats:
 # Set the version of Python and install method
 python:
   version: 2.7
-  - method: setuptools
-    path: .
+  install:
+    - method: setuptools
+      path: .
