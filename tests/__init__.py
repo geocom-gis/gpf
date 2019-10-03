@@ -15,5 +15,5 @@
 # limitations under the License.
 
 """
-Module doc
+Test modules for the :py:mod:``gpf`` package. Requires ``pytest``.
 """
