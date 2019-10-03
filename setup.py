@@ -36,7 +36,7 @@ setup(
             'Environment :: Other Environment',
             'Operating System :: Microsoft :: Windows',
             'Topic :: Scientific/Engineering :: GIS',
-            'License :: OSI Approved :: Apache License 2.0',
+            'License :: OSI Approved :: Apache Software License',
             'Programming Language :: Python :: 2.7'
         ]
 )
