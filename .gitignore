@@ -1,0 +1,13 @@
+# Ignored file extensions
+*.py[cod]
+*.log
+.coverage
+
+# IDE and test cache folders
+.idea/
+.pytest_cache/
+
+# Setuptools folders and metadata
+/dist/
+/build/
+/*.egg-info
