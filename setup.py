@@ -24,7 +24,7 @@ def read(fname):
 
 setup(
         name='gpf',
-        packages=find_packages(exclude=('tests', 'apidoc')),
+        packages=find_packages(exclude=('tests', 'docs')),
         version='0.1',
         license='Apache License 2.0',
         description='Scripting framework for ArcPy (Esri ArcGIS 10.6+).',
