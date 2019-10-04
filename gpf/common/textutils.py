@@ -265,6 +265,6 @@ def format_timedelta(start, stop=None):
     m, s = divmod(rem, 60)
     t_comp = (format_plural(f, t)
               for f, t in
-              (('day', int(d)), ('hour', int(h)), ('minute', int(m)), ('second', s))
+              (('day', int(d)), ('hour', int(h)), ('minute', int(m)), ('second', round(s, 3)))
               if t > 0)
     return format_iterable([t for t in t_comp] or ['0 seconds'])
