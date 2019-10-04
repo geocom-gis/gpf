@@ -14,7 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gpf.tools.lookup import coord_key
+import pytest
+
+try:
+    from gpf.tools.lookup import coord_key
+except ImportError:
+    coord_key = None
+    pytest.skip('ArcPy dependency cannot be loaded')
 
 
 def test_coord_key():
