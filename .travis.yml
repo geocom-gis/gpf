@@ -4,13 +4,14 @@ python:
   - "2.7.15"
   - "2.7.16"
 
-# command to install
+# install package and test dependencies
 install:
   - pip install .
+  - pip install pytest-mock
 
-# tell pytest we're running from Travis
+# tell pytest to mock the arcpy library
 env:
-  - travis=1
+  - mock_arcpy=true
 
 # command to run tests
 script: pytest

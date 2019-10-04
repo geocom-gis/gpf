@@ -4,7 +4,10 @@
 
 import pytest
 
-import gpf.tools.workspace as ws
+from tests import ArcPyMock
+
+with ArcPyMock():
+    import gpf.tools.workspace as ws
 
 
 def test_getworkspace():
