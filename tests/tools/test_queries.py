@@ -16,7 +16,7 @@
 
 import pytest
 
-from tests import ArcPyMock
+from .. import ArcPyMock
 
 with ArcPyMock():
     from gpf.tools.queries import InitError

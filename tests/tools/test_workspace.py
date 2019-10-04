@@ -4,7 +4,7 @@
 
 import pytest
 
-from tests import ArcPyMock
+from .. import ArcPyMock
 
 with ArcPyMock():
     import gpf.tools.workspace as ws
