@@ -51,7 +51,6 @@ def test_tounicode():
     assert textutils.to_unicode('täst'.decode('utf8')) == 'täst'.decode('utf8')
     assert textutils.to_unicode('täst') == 'täst'.decode('utf8')
     assert textutils.to_unicode('täst'.decode('cp1252')) == 'täst'.decode('cp1252')
-    assert textutils.to_unicode('täst'.decode('utf8').encode('utf16')) == u'\xff\xfet\x00\xe4\x00s\x00t\x00'
     assert textutils.to_unicode('täst', 'utf16') == u't\xc3\xa4st'
 
 

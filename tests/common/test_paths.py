@@ -10,13 +10,13 @@ import gpf.common.paths as paths
 
 
 def test_explode():
-    assert paths.explode(r'C:/temp/test.gdb') == ('C:\\temp', 'test', '.gdb')
-    assert paths.explode(r'C:/temp/folder') == ('C:\\temp', 'folder', '')
+    assert paths.explode('C:\\temp\\test.gdb') == ('C:\\temp', 'test', '.gdb')
+    assert paths.explode('C:\\temp\\folder') == ('C:\\temp', 'folder', '')
 
 
 def test_normalize():
-    assert paths.normalize(r'A/B\C') == 'a\\b\\c'
-    assert paths.normalize(r'A/b\c', False) == 'A\\b\\c'
+    assert paths.normalize('A/B\\C') == 'a\\b\\c'
+    assert paths.normalize('A/b\\c', False) == 'A\\b\\c'
 
 
 def test_join():
@@ -35,11 +35,11 @@ def test_pathmanager_bad_init():
         paths.PathManager(None)
         paths.PathManager('')
     with pytest.raises(ValueError):
-        paths.PathManager(r'C:\directory\file.ext', r'C:\directory')
+        paths.PathManager('C:\\directory\\file.ext', 'C:\\directory')
 
 
 def test_pathmanager_bad_file():
-    pm = paths.PathManager(r'C:\directory\file.ext')
+    pm = paths.PathManager('C:\\directory\\file.ext')
     assert not pm.is_file
     assert not pm.is_dir
     assert not pm.exists
@@ -51,7 +51,7 @@ def test_pathmanager_bad_file():
 
 
 def test_pathmanager_bad_dir():
-    pm = paths.PathManager(r'C:\directory\test')
+    pm = paths.PathManager('C:\\directory\\test')
     assert not pm.is_file
     assert not pm.is_dir
     assert not pm.exists
