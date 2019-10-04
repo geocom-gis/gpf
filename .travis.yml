@@ -3,8 +3,14 @@ python:
   - "2.7.14"
   - "2.7.15"
   - "2.7.16"
+
 # command to install
 install:
   - pip install .
+
+# tell pytest we're running from Travis
+env:
+  - travis=1
+
 # command to run tests
 script: pytest
