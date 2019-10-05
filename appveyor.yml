@@ -23,4 +23,4 @@ install:
   - pip install -e .[test]
 
 test_script:
-  - py.test tests
+  - py.test tests --cov=gpf --mock_arcpy

@@ -22,7 +22,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-tests_require = ['pytest', 'mock', 'pytest-mock']
+tests_require = ['pytest', 'pytest-cov', 'mock', 'pytest-mock']
 setup(
         name='gpf',
         packages=find_packages(exclude=('tests', 'docs')),
