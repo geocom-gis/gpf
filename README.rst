@@ -1,11 +1,28 @@
 Welcome to the Geocom Python Framework (GPF)
 ============================================
 
-|docs|
+|python| |status| |pypi| |build| |issues| |docs|
 
-.. |docs| image:: https://readthedocs.org/projects/gpf/badge/
-    :alt: Documentation Status
-    :scale: 100%
+.. |python| image:: https://img.shields.io/pypi/pyversions/gpf?logo=python
+    :alt: Python version(s)
+
+.. |status| image:: https://img.shields.io/pypi/status/gpf
+    :alt: PyPI status
+
+.. |pypi| image:: https://img.shields.io/pypi/v/gpf?logo=pypi
+    :alt: PyPI homepage
+    :target: https://pypi.org/project/gpf
+
+.. |build| image:: https://img.shields.io/appveyor/ci/geonis-github/gpf?logo=appveyor
+    :alt: AppVeyor
+    :target: https://ci.appveyor.com/project/GEONIS-GITHUB/gpf
+
+.. |issues| image:: https://img.shields.io/github/issues-raw/geocom-gis/gpf?logo=github
+    :alt: GitHub issues
+    :target: https://github.com/geocom-gis/gpf/issues
+
+.. |docs| image:: https://img.shields.io/readthedocs/gpf?logo=read%20the%20docs
+    :alt: Documentation
     :target: https://gpf.readthedocs.io/en/latest/
 
 Purpose
