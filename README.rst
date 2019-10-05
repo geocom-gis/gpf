@@ -28,30 +28,34 @@ Welcome to the Geocom Python Framework (GPF)
 Purpose
 -------
 
-The *Geocom Python Framework* or `gpf` provides a set of Python modules that contain tools, helpers, loggers etc. for a more pleasant Python scripting experience in ArcGIS_ and/or GEONIS_.
-GIS users who need to write geoprocessing scripts with `arcpy` might benefit from importing the `gpf` module into their script as well.
+The *Geocom Python Framework* or ``gpf`` provides a set of Python modules that contain tools, helpers, loggers etc. for a more pleasant Python scripting experience in ArcGIS_ and/or GEONIS_.
+GIS users who need to write geoprocessing scripts with ``arcpy`` might benefit from importing the ``gpf`` module into their script as well.
 
-The `gpf` module in this repository has been developed for **Python 2.7.14+ (ArcGIS Desktop/Server)**.
-However, it is `also available for Python 3.6+`_ (ArcGIS Pro, Server).
+The ``gpf`` module in this repository has been developed for **Python 2.7.14+ (ArcGIS Desktop/Server)**.
+However, it is also available for Python 3.6+ (ArcGIS Pro, Server) on |gpf3_github| and |gpf3_pypi|.
 
-Geocom customers who need to write GEONIS menu or form scripts should also look into the `gntools`_ module.
+Geocom customers who need to write GEONIS menu or form scripts should also look into the ``gntools`` module on GitHub_ or PyPI_.
 
 .. _ArcGIS: https://www.esri.com
 .. _GEONIS: https://geonis.com/en/solutions/framework/geonis
-.. _also available for Python 3.6+: https://pypi.org/project/gpf3
-.. _gntools: https://pypi.org/project/gntools
+.. |gpf3_github| replace:: GitHub
+.. _gpf3_github: https://github.com/geocom-gis/gpf3
+.. |gpf3_pypi| replace:: PyPI
+.. _gpf3_pypi: https://pypi.org/project/gpf3
+.. _GitHub: https://github.com/geocom-gis/gpf3
+.. _PyPI: https://pypi.org/project/gpf3
 
 Requirements
 ------------
 
 - ArcGIS Desktop and/or ArcGIS Server 10.6 or higher
-- Python 2.7.14 or higher (along with the `arcpy` module)
+- Python 2.7.14 or higher (along with the ``arcpy`` module)
 
 Installation
 ------------
 
-The easiest way to install the Geocom Python Framework, is to use `pip`_, a Python package manager.
-When `pip` is installed, the user can simply run:
+The easiest way to install the Geocom Python Framework, is to use pip_, a Python package manager.
+When ``pip`` is installed, the user can simply run:
 
     ``python -m pip install gpf``
 
@@ -60,7 +64,7 @@ When `pip` is installed, the user can simply run:
 Documentation
 -------------
 
-The complete `gpf` documentation can be found at `Read the Docs`_.
+The complete ``gpf`` documentation can be found at `Read the Docs`_.
 
 .. _Read the Docs: https://gpf.readthedocs.io/
 
