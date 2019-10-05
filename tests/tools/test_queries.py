@@ -16,12 +16,9 @@
 
 import pytest
 
-from .. import ArcPyMock
-
-with ArcPyMock():
-    from gpf.tools.queries import InitError
-    from gpf.tools.queries import OperatorError
-    from gpf.tools.queries import Where
+from gpf.tools.queries import OperatorError
+from gpf.tools.queries import Where
+from gpf.tools.queries import InitError
 
 
 def test_where_bad_init():

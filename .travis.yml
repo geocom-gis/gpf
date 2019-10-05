@@ -9,9 +9,5 @@ install:
   - pip install .
   - pip install pytest-mock
 
-# tell pytest to mock the arcpy library
-env:
-  - mock_arcpy=true
-
-# command to run tests
-script: pytest
+# command to run tests with mock arcpy module
+script: pytest --mock_arcpy

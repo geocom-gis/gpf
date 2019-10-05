@@ -14,10 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .. import ArcPyMock
-
-with ArcPyMock():
-    from gpf.tools.lookup import coord_key
+from gpf.tools.lookup import coord_key
 
 
 def test_coord_key():
