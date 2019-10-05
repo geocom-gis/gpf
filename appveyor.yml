@@ -1,19 +1,19 @@
-version: 1.0.{build}
-image: Visual Studio 2015
-
-build: false
-
 environment:
   matrix:
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.14"
-      PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.15"
       PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.16"
       PYTHON_ARCH: "32"
+    - PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7.15"
+      PYTHON_ARCH: "32"
+    - PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7.16"
+      PYTHON_ARCH: "32"
+
+build: false
 
 init:
   - ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%
