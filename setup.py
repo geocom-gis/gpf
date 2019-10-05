@@ -29,6 +29,7 @@ setup(
         license='Apache License 2.0',
         description='Geocom Python Framework for ArcPy (Esri ArcGIS).',
         long_description=read('README.rst'),
+        long_description_content_type='text/x-rst',
         author='Geocom Informatik AG / VertiGIS, Burgdorf, Switzerland',
         author_email='github@geocom.ch',
         url='https://github.com/geocom-gis/gpf',
@@ -41,7 +42,7 @@ setup(
             'geospatial', 'geoprocessing', 'Esri', 'ArcGIS', 'ArcPy', 'VertiGIS'
         ],
         python_requires='>=2.7.14, <3',
-        tests_require=['pytest', 'pytest-mock'],
+        tests_require=['pytest', 'mock', 'pytest-mock'],
         classifiers=[
             'Development Status :: 4 - Beta',  # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
             'Intended Audience :: Developers',
