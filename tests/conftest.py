@@ -25,7 +25,8 @@ import pytest
 def pytest_addoption(parser):
     # Add option to mock the arcpy module.
     # This is required on systems where ArcGIS and/or a license is not available.
-    parser.addoption('--mock_arcpy', action="store_true")
+    # Note that this might produce unexpected results for certain tests!
+    parser.addoption('--mock_arcpy', action='store_true', help='Replace arcpy module with a mock object')
 
 
 def pytest_collection(session):
