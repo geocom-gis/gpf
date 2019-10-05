@@ -1,13 +1,21 @@
 language: python
+group: travis_latest
+
 python:
   - "2.7.14"
   - "2.7.15"
   - "2.7.16"
 
+matrix:
+  include:
+    - os: windows
+      language: minimal
+      before_install:
+        - choco install python2
+        - export PATH="/c/Python27:/c/Python27/Scripts:$PATH"
+
 # install package and test dependencies
-install:
-  - pip install .
-  - pip install pytest-mock
+install: pip install -e .[tests]
 
 # command to run tests with mock arcpy module
 script: pytest --mock_arcpy
