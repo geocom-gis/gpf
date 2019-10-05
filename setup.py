@@ -41,6 +41,7 @@ setup(
             'geospatial', 'geoprocessing', 'Esri', 'ArcGIS', 'ArcPy', 'VertiGIS'
         ],
         python_requires='>=2.7.14, <3',
+        tests_require=['pytest', 'pytest-mock'],
         classifiers=[
             'Development Status :: 4 - Beta',  # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
             'Intended Audience :: Developers',
