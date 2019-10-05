@@ -22,6 +22,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
+tests_require = ['pytest', 'mock', 'pytest-mock']
 setup(
         name='gpf',
         packages=find_packages(exclude=('tests', 'docs')),
@@ -42,7 +43,10 @@ setup(
             'geospatial', 'geoprocessing', 'Esri', 'ArcGIS', 'ArcPy', 'VertiGIS'
         ],
         python_requires='>=2.7.14, <3',
-        tests_require=['pytest', 'mock', 'pytest-mock'],
+        tests_require=tests_require,
+        extras_require={
+            'test': tests_require
+        },
         classifiers=[
             'Development Status :: 4 - Beta',  # "3 - Alpha", "4 - Beta" or "5 - Production/Stable"
             'Intended Audience :: Developers',
