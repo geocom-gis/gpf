@@ -31,7 +31,7 @@ build: false
 init:
   # Determine if a distribution should be built and published (override PUBLISH variable)
   # Publish when a repo tag has been pushed on the master branch and the Python architecture is 32-bits
-  - if "%APPVEYOR_REPO_TAG%" == "true" && "%APPVEYOR_REPO_BRANCH%" == "master" && "%PYTHON_ARCH%" == "32" set PUBLISH=true
+  - if "%APPVEYOR_REPO_TAG%" == "true" if "%APPVEYOR_REPO_BRANCH%" == "master" if "%PYTHON_ARCH%" == "32" set PUBLISH=true
 
   # Echo variables for verification purposes
   - ECHO python_path=%PYTHON%, version=%PYTHON_VERSION%, architecture=%PYTHON_ARCH%-bit
