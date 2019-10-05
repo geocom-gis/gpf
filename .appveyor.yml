@@ -1,48 +1,80 @@
 version: '0.1.{build}'
 
-# Start builds on tags only (GitHub, BitBucket, GitLab, etc.)
-# skip_non_tags: true
+# The "Visual Studio 2013" VM supports the lowest Python 2.7 version, which is 2.7.15
+image: Visual Studio 2013
 
 # Maximum number of concurrent jobs for the project (play nice)
 max_jobs: 1
 
-# Build environments
+# Environment settings
 environment:
-  matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.15"
-      PYTHON_ARCH: "32"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.15"
-      PYTHON_ARCH: "32"
-#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-#      PYTHON: "C:\\Python27"
-#      PYTHON_VERSION: "2.7.16"
-#      PYTHON_ARCH: "32"
-#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-#      PYTHON: "C:\\Python27-x64"
-#      PYTHON_VERSION: "2.7.16"
-#      PYTHON_ARCH: "32"
 
+  global:
+    PUBLISH: false
+    TWINE_USERNAME: geocom
+    TWINE_PASSWORD:
+      secure: rYS2/K9Q9nPRiwmwIKTu6A==
+
+  matrix:
+
+    - PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7.15"
+      PYTHON_ARCH: "32"
+
+    - PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7.15"
+      PYTHON_ARCH: "64"
+
+# The build setting is for .NET only: Python does not compile anything
 build: false
 
 init:
-  - ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%
+  # Determine if a distribution should be built and published (override PUBLISH variable)
+  # Publish when a repo tag has been pushed on the master branch and the Python architecture is 32-bits
+  - if "%APPVEYOR_REPO_TAG%" == "true" && "%APPVEYOR_REPO_BRANCH%" == "master" && "%PYTHON_ARCH%" == "32" set PUBLISH=true
+
+  # Echo variables for verification purposes
+  - ECHO python_path=%PYTHON%, version=%PYTHON_VERSION%, architecture=%PYTHON_ARCH%-bit
+  - ECHO publish=%PUBLISH%, tagged=%APPVEYOR_REPO_TAG%, branch=%APPVEYOR_REPO_BRANCH%
 
 install:
-  # Prepend newly installed Python to the PATH of this build (this cannot be
-  # done from inside the powershell script as it would require to restart
-  # the parent CMD process).
+  # Prepend newly installed Python to the PATH of this build
   - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
-  # Check that we have the expected version and architecture for Python
+  # Check that Python can be found and that we really have the expected version and architecture
   - python -c "import sys;print(sys.version)"
+
+  # Make sure that wheel and twine are installed so we can build wheels and publish to PyPI
+  - pip install wheel twine
 
   # Install the project and its dependencies
   - pip install -e .[test]
 
 test_script:
   # Run pytest with coverage and mock arcpy module
-  - py.test tests --cov=gpf --mock_arcpy
+  - py.test tests --cov= --mock_arcpy
+
+after_test:
+  # Build standard distribution and wheel if PUBLISH is true
+  - if "%PUBLISH%" == "true" python setup.py sdist bdist_wheel
+
+artifacts:
+  # Python distributions can be found in the dist directory
+  - path: dist\\*
+    name: pypi_releases
+
+deploy:
+  # Deploy release to GitHub only when PUBLISH is true
+  - provider: GitHub
+    auth_token:
+      secure: lXMk68xShK4caI5U+BjFHnFXSgcXIubv3WlyzbQ50YbyKzcqnhgyFj4FN723j4sK
+    artifact: pypi_releases
+    draft: true
+    prerelease: false
+    force_update: true
+    on:
+      PUBLISH: true
+
+on_success:
+  # Publish to PyPI using Twine if PUBLISH is true
+  - if "%PUBLISH%" == "true" twine upload dist\\*
