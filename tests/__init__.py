@@ -17,36 +17,3 @@
 """
 Test modules for the :py:mod:``gpf`` package. Requires ``pytest``.
 """
-
-import os
-import sys
-
-from gpf.common.const import ARCPY
-
-
-class ArcPyMock(object):
-    """
-    Context manager that should be used before all test imports that depend on arcpy.
-    If the environment variable specified by ArcPyMock.ENV_KEY is truthy,
-    the arcpy module will be replaced by a MagicMock object.
-
-    Note that arcpy is still unusable like this, but modules that depend on it can at least load properly.
-    """
-
-    ENV_KEY = 'mock_{}'.format(ARCPY)
-
-    def __init__(self):
-        pass
-
-    def __enter__(self):
-        if os.environ.get(ArcPyMock.ENV_KEY):
-            from warnings import warn
-            from mock import MagicMock
-
-            sys.modules[ARCPY] = MagicMock()
-            warn('The arcpy module has been replaced by a mock object ({} = true)'.format(ArcPyMock.ENV_KEY))
-
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return
