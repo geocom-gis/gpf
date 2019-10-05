@@ -1,15 +1,25 @@
+# Start builds on tags only (GitHub, BitBucket, GitLab, etc.)
+# skip_non_tags: true
+
+# Maximum number of concurrent jobs for the project
+max_jobs: 1
+
 environment:
   matrix:
-    - PYTHON: "C:\\Python27"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+      PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.15"
       PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Python27"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+      PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7.15"
+      PYTHON_ARCH: "32"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7.16"
       PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.15"
-      PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Python27-x64"
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      PYTHON: "C:\\Python27-x64"
       PYTHON_VERSION: "2.7.16"
       PYTHON_ARCH: "32"
 
@@ -25,9 +35,7 @@ install:
   - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
   # Check that we have the expected version and architecture for Python
-  - python --version
-  - python -c "import sys, platform, struct;
-    print(sys.platform, platform.machine(), struct.calcsize('P')*8)"
+  - python -c "import sys;print(sys.version)"
 
   # Install the project and its dependencies
   - pip install -e .[test]
