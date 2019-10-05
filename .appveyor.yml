@@ -1,5 +1,3 @@
-version: '0.1.{build}'
-
 # The "Visual Studio 2013" VM supports the lowest Python 2.7 version, which is 2.7.15
 image: Visual Studio 2013
 
