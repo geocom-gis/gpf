@@ -20,7 +20,7 @@ init:
 
 install:
   - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-  - pip install -e .[tests]
+  - pip install -e .
 
 test_script:
   - py.test tests
