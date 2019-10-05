@@ -52,7 +52,7 @@ install:
 
 test_script:
   # Run pytest with coverage and mock arcpy module
-  - py.test tests --cov= --mock_arcpy
+  - py.test tests --cov=gpf --mock_arcpy
 
 after_test:
   # Build standard distribution and wheel if PUBLISH is true
