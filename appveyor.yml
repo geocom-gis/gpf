@@ -19,8 +19,19 @@ init:
   - ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%
 
 install:
-  - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
+  # Prepend newly installed Python to the PATH of this build (this cannot be
+  # done from inside the powershell script as it would require to restart
+  # the parent CMD process).
+  - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+
+  # Check that we have the expected version and architecture for Python
+  - python --version
+  - python -c "import sys, platform, struct;
+    print(sys.platform, platform.machine(), struct.calcsize('P')*8)"
+
+  # Install the project and its dependencies
   - pip install -e .[test]
 
 test_script:
+  # Run pytest with coverage and mock arcpy module
   - py.test tests --cov=gpf --mock_arcpy
