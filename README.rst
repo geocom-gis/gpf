@@ -34,10 +34,11 @@ GIS users who need to write geoprocessing scripts with ``arcpy`` might benefit f
 The ``gpf`` module in this repository has been developed for **Python 2.7.14+ (ArcGIS Desktop/Server)**.
 However, it is also available for Python 3.6+ (ArcGIS Pro, Server) on `GitHub <https://github.com/geocom-gis/gpf3>`_ and `PyPI <https://pypi.org/project/gpf3>`_.
 
-Geocom customers who need to write GEONIS menu or form scripts should also look into the ``gntools`` module on `GitHub <https://github.com/geocom-gis/gntools>`_ or `PyPI <https://pypi.org/project/gntools>`_.
+Geocom customers who need to write GEONIS menu or form scripts should also look into the gntools_ module.
 
 .. _ArcGIS: https://www.esri.com
 .. _GEONIS: https://geonis.com/en/solutions/framework/geonis
+.. _gntools: https://pypi.org/project/gntools
 
 Requirements
 ------------
