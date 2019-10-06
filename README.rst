@@ -13,9 +13,9 @@ Welcome to the Geocom Python Framework (GPF)
     :alt: PyPI homepage
     :target: https://pypi.org/project/gpf
 
-.. |build| image:: https://img.shields.io/appveyor/ci/geonis-github/gpf?logo=appveyor
+.. |build| image:: https://img.shields.io/appveyor/ci/geocom/gpf?logo=appveyor
     :alt: AppVeyor
-    :target: https://ci.appveyor.com/project/GEONIS-GITHUB/gpf
+    :target: https://ci.appveyor.com/project/geocom/gpf
 
 .. |issues| image:: https://img.shields.io/github/issues-raw/geocom-gis/gpf?logo=github
     :alt: GitHub issues
