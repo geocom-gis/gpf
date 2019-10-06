@@ -35,6 +35,9 @@ init:
   - ECHO python_path=%PYTHON%, version=%PYTHON_VERSION%, architecture=%PYTHON_ARCH%-bit
   - ECHO publish=%PUBLISH%, tagged=%APPVEYOR_REPO_TAG%, branch=%APPVEYOR_REPO_BRANCH%
 
+  # Split APPVEYOR_REPO_NAME into REPO_OWNER and REPO_NAME
+  - cmd: FOR /f "tokens=1,2 delims=/" %%a IN ("%APPVEYOR_REPO_NAME%") do set REPO_OWNER=%%a&set REPO_NAME=%%b
+
 install:
   # Prepend newly installed Python to the PATH of this build
   - SET PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
@@ -50,7 +53,7 @@ install:
 
 test_script:
   # Run pytest with coverage and mock arcpy module
-  - py.test tests --cov=%APPVEYOR_REPO_NAME% --mock_arcpy
+  - py.test tests --cov=%REPO_NAME% --mock_arcpy
 
 after_test:
   # Build standard distribution and wheel if PUBLISH is true
@@ -58,11 +61,11 @@ after_test:
 
 artifacts:
   # Python distributions can be found in the dist directory
-  - path: dist\\*
+  - path: 'dist\*'
     name: pypi_releases
 
 deploy:
-  # Deploy release to GitHub only when PUBLISH is true
+  # Add release draft to GitHub only when PUBLISH is true
   - provider: GitHub
     auth_token:
       secure: lXMk68xShK4caI5U+BjFHnFXSgcXIubv3WlyzbQ50YbyKzcqnhgyFj4FN723j4sK
