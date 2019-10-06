@@ -33,7 +33,7 @@ init:
 
   # Echo variables for verification purposes
   - ECHO python_path=%PYTHON%, version=%PYTHON_VERSION%, architecture=%PYTHON_ARCH%-bit
-  - ECHO publish=%PUBLISH%, tagged=%APPVEYOR_REPO_TAG%, branch=%APPVEYOR_REPO_BRANCH%
+  - ECHO publish=%PUBLISH%, tagged=%APPVEYOR_REPO_TAG%, tag=%APPVEYOR_REPO_TAG_NAME%, branch=%APPVEYOR_REPO_BRANCH%
 
   # Split APPVEYOR_REPO_NAME into REPO_OWNER and REPO_NAME
   - cmd: FOR /f "tokens=1,2 delims=/" %%a IN ("%APPVEYOR_REPO_NAME%") do set REPO_OWNER=%%a&set REPO_NAME=%%b
