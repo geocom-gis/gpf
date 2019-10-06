@@ -9,6 +9,7 @@ environment:
 
   global:
     PUBLISH: false
+    BUILD_OK: false
     TWINE_USERNAME: geocom
     TWINE_PASSWORD:
       secure: rYS2/K9Q9nPRiwmwIKTu6A==
@@ -31,16 +32,16 @@ matrix:
 build: false
 
 init:
-  # Determine if a distribution should be built and published (override PUBLISH variable)
-  # Publish when a repo tag has been pushed on the master branch and the Python architecture is 32-bits
-  - if "%APPVEYOR_REPO_TAG%" == "true" if "%APPVEYOR_REPO_BRANCH%" == "master" if "%PYTHON_ARCH%" == "32" set PUBLISH=true
+  # Determine if a distribution should be built and published (override PUBLISH variable).
+  # Publish when a repo tag has been pushed on the master branch and the Python architecture is 32-bits.
+  - IF "%APPVEYOR_REPO_TAG%" == "true" IF "%APPVEYOR_REPO_BRANCH%" == "master" IF "%PYTHON_ARCH%" == "32" SET PUBLISH=true
 
   # Echo variables for verification purposes
   - ECHO python_path=%PYTHON%, version=%PYTHON_VERSION%, architecture=%PYTHON_ARCH%-bit
   - ECHO publish=%PUBLISH%, tagged=%APPVEYOR_REPO_TAG%, tag=%APPVEYOR_REPO_TAG_NAME%, branch=%APPVEYOR_REPO_BRANCH%
 
   # Split APPVEYOR_REPO_NAME into REPO_OWNER and REPO_NAME
-  - cmd: FOR /f "tokens=1,2 delims=/" %%a IN ("%APPVEYOR_REPO_NAME%") do set REPO_OWNER=%%a&set REPO_NAME=%%b
+  - cmd: FOR /f "tokens=1,2 delims=/" %%a IN ("%APPVEYOR_REPO_NAME%") do SET REPO_OWNER=%%a&SET REPO_NAME=%%b
 
 install:
   # Prepend newly installed Python to the PATH of this build
@@ -50,7 +51,8 @@ install:
   - python -c "import sys;print(sys.version)"
 
   # Make sure that wheel and twine are installed so we can build wheels and publish to PyPI
-  - pip install --disable-pip-version-check setuptools wheel twine
+  # Upgrading pip itself might (sometimes?) fail due to permissions
+  - pip install --upgrade --disable-pip-version-check setuptools wheel twine
 
   # Install the project and its dependencies
   - pip install --disable-pip-version-check -e .[test]
@@ -63,13 +65,26 @@ test_script:
   - py.test tests --cov=%REPO_NAME% --mock_arcpy
 
 after_test:
-  # Build standard distribution and wheel if PUBLISH is true
-  - if "%PUBLISH%" == "true" python setup.py sdist bdist_wheel
+  # Build standard distribution and wheel
+  - python setup.py sdist bdist_wheel
+
+  # Check distribution for PyPI using Twine and output message(s)
+  - cmd: FOR /F "tokens=1 delims=" %%a in ('twine check dist\*') do SET CHECKRESULT=%%a
+  - ECHO %CHECKRESULT%
+
+  # Twine exits with code 0 if the dist is okay. However, there might be warnings that can cause an upload to fail.
+  # If the CHECKRESULT output from Twine does not contain the word PASSED, it means that there a warnings.
+  # Only if there are NO warnings, we will set BUILD_OK to true and deploy and publish a release.
+  - IF NOT "x%CHECKRESULT:passed=%"=="x%CHECKRESULT%" SET BUILD_OK=true
 
 artifacts:
   # Python distributions can be found in the dist directory
   - path: 'dist\*'
     name: pypi_releases
+
+before_deploy:
+  # If BUILD_OK is false, exit with code 1 (force AppVeyor to fail the build)
+  - IF "%BUILD_OK%" == "false" exit 1
 
 deploy:
   # Add release draft to GitHub only when PUBLISH is true
@@ -82,7 +97,8 @@ deploy:
     force_update: true
     on:
       PUBLISH: true
+      BUILD_OK: true
 
 on_success:
   # Publish to PyPI using Twine if PUBLISH is true
-  - if "%PUBLISH%" == "true" twine upload dist\\*
+  - IF "%PUBLISH%" == "true" IF "%BUILD_OK%" == "true" twine upload dist\\*
