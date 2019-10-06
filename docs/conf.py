@@ -29,20 +29,21 @@
 #
 import os
 import sys
+from pkg_resources import get_distribution
 sys.path.insert(0, os.path.abspath('..\\..'))
-
 
 # -- Project information -----------------------------------------------------
 
-project = u'gpf'
-copyright = u'2019, Geocom Informatik AG / VertiGIS, Burgdorf, Switzerland'
-author = u'Geocom Informatik AG'
+project = 'gpf'
+title = u'Geocom Python Framework'
+description = u'Scripting framework for ArcPy'
+author = u'Geocom Informatik AG / VertiGIS'
+copyright = u'2019, {}, Burgdorf, Switzerland'.format(author)
 
-# The short X.Y version
-version = u'0.1'
 # The full version, including alpha/beta/rc tags
-release = u'0.1 Beta'
-
+release = get_distribution(project).version
+# The short X.Y version
+version = u'.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -124,7 +125,7 @@ html_theme = 'sphinx_rtd_theme'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'gpfdoc'
+htmlhelp_basename = '{}doc'.format(project)
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -151,8 +152,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'gpf.tex', u'Geocom Python Framework Documentation',
-     u'Author', 'manual'),
+    (master_doc, '{}.tex'.format(project), u'{} Documentation'.format(title),
+     author, 'manual'),
 ]
 
 
@@ -161,7 +162,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'gpf', u'Geocom Python Framework Documentation',
+    (master_doc, project, u'{} Documentation'.format(title),
      [author], 1)
 ]
 
@@ -172,9 +173,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'gpf', u'Geocom Python Framework Documentation',
-     author, 'geocom', 'One line description of project.',
-     'Miscellaneous'),
+    (master_doc, project, u'{} Documentation'.format(title),
+     author, project, description, 'Miscellaneous'),
 ]
 
 
