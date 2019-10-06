@@ -23,6 +23,13 @@ environment:
       PYTHON_VERSION: "2.7.15"
       PYTHON_ARCH: "64"
 
+matrix:
+  # Cancel other jobs for the same build if this one fails
+  fast_finish: true
+
+# Do a shallow-ish clone
+clone_depth: 5
+
 # The build setting is for .NET only: Python does not compile anything
 build: false
 
@@ -46,10 +53,13 @@ install:
   - python -c "import sys;print(sys.version)"
 
   # Make sure that wheel and twine are installed so we can build wheels and publish to PyPI
-  - pip install -U pip wheel setuptools twine
+  - pip install --user --upgrade --disable-pip-version-check pip wheel twine
 
   # Install the project and its dependencies
   - pip install -e .[test]
+
+cache:
+  - '%LOCALAPPDATA%\pip\Cache'
 
 test_script:
   # Run pytest with coverage and mock arcpy module
