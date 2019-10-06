@@ -46,7 +46,7 @@ install:
   - python -c "import sys;print(sys.version)"
 
   # Make sure that wheel and twine are installed so we can build wheels and publish to PyPI
-  - pip install wheel twine
+  - pip install -U pip wheel setuptools twine
 
   # Install the project and its dependencies
   - pip install -e .[test]
