@@ -26,7 +26,8 @@ tests_require = ['pytest', 'pytest-cov', 'mock', 'pytest-mock']
 setup(
         name='gpf',
         packages=find_packages(exclude=('tests', 'docs')),
-        version='0.1',
+        use_scm_version=True,
+        setup_requires=['setuptools_scm'],
         license='Apache License 2.0',
         description='Geocom Python Framework for ArcPy (Esri ArcGIS).',
         long_description_content_type='text/x-rst',
