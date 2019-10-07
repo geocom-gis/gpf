@@ -11,8 +11,7 @@ environment:
     PUBLISH: false
     BUILD_OK: false
     TWINE_USERNAME: geocom
-    TWINE_PASSWORD:
-      secure: rYS2/K9Q9nPRiwmwIKTu6A==
+    # TWINE_PASSWORD is stored on AppVeyor
 
   matrix:
 
