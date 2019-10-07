@@ -20,6 +20,10 @@ should make it a little easier to work with ArcGIS and ``arcpy``.
 
 Some classes are wrappers for well-known ``arcpy`` classes,
 created for a more user-friendly experience and/or better performance.
+
+.. note::   It is recommended to import ``arcpy`` from the *tools* subpackage (``from gpf.tools import arcpy``).
+            This will load the same (and unmodified) module as ``import arcpy`` would load, but it shows
+            more useful error messages when the import failed.
 """
 
 import sys as _sys
