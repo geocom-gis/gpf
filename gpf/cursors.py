@@ -29,12 +29,13 @@ In theory, one should be able to simply replace the legacy Esri cursors (in some
 with the ones in this module without too much hassle, since all old methods have been ported to this module.
 The only thing you might need to replace and verify for compatibility is the call to the actual cursor itself.
 """
+
+from gpf import arcpy as _arcpy
 import gpf.common.const as _const
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 import gpf.tools.queries as _q
-import gpf.tools.workspace as _ws
-from gpf.tools import arcpy as _arcpy
+import gpf.paths as _paths
 
 
 def _map_fields(fields):
@@ -190,11 +191,11 @@ class Editor(_arcpy.da.Editor):
     However, one can also instantiate the Editor and call :func:`start` and :func:`stop` respectively when done.
 
     :param path:        A path on which to open the edit session. This can be a table or feature class path,
-                        a workspace path or a class:`gpf.tools.workspace.WorkspaceManager` instance.
+                        a workspace path or a class:`~gpf.paths.Workspace` instance.
     :param with_undo:   If ``True`` (default = ``False``), an undo stack will be kept.
                         For versioned workspaces, this setting has no effect (always ``True``).
                         For all other workspaces, having this value set to ``False`` improves performance.
-    :type path:         str, unicode, WorkspaceManager
+    :type path:         str, unicode, Workspace
     :type with_undo:    bool
 
     .. note::           The :class:`InsertCursor` and :class:`UpdateCursor` in this module use the Editor on demand,
@@ -203,8 +204,8 @@ class Editor(_arcpy.da.Editor):
     """
 
     def __init__(self, path, with_undo=False):
-        if not isinstance(path, _ws.WorkspaceManager):
-            path = _ws.get_workspace(path, True)
+        if not isinstance(path, _paths.Workspace):
+            path = _paths.get_workspace(path, True)
         super(Editor, self).__init__(str(path))
         self._versioned = (len(_arcpy.da.ListVersions(str(path))) > 1) if path.is_remote else False
         # If the database is versioned, always use the undo stack

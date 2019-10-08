@@ -23,7 +23,7 @@ from abc import abstractmethod
 
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
-import gpf.tools.cursors as _cursors
+import gpf.cursors as _cursors
 import gpf.tools.metadata as _metadata
 
 _DUPEKEYS_ARG = 'duplicate_keys'
@@ -34,7 +34,7 @@ _FLD_SHAPEXY = 'SHAPE@XY'
 
 #: The default (Esri-recommended) resolution that is used by the :func:`coord_key` function (i.e. for lookups).
 #: If coordinate values fall within this distance, they are considered equal.
-#: Set this to a higher or lower value (metric units) if required.
+#: Set this to a higher or lower value (coordinate system units) if required.
 XYZ_RESOLUTION = 0.0001
 
 
@@ -54,7 +54,7 @@ def coord_key(x, y, z=None):
 
     .. warning::    This function has been tested on 10 million random points and no duplicate keys were encountered.
                     However, bear in mind that 2 nearly identical coordinates might share the same key if they lie
-                    within the default resolution distance from each other (0.0001 meter).
+                    within the default resolution distance from each other (0.0001 units e.g. meters).
                     If the default resolution needs to be changed, set the ``XYZ_RESOLUTION`` constant beforehand.
 
     Example:
@@ -146,7 +146,7 @@ class ValueLookup(_BaseLookup):
     :param table_path:          Full source table or feature class path.
     :param key_field:           The field to use for the ValueLookup dictionary keys.
                                 If `SHAPE@XY` is used as the key field, the coordinates are "hashed" using the
-                                :func:`gpf.tools.lookup.coord_key` function.
+                                :func:`~gpf.lookups.coord_key` function.
                                 This means, that the user should use this function as well in order to
                                 to create a coordinate key prior to looking up the matching value for it.
     :param value_field:         The single field to include in the ValueLookup dictionary value.
@@ -167,7 +167,7 @@ class ValueLookup(_BaseLookup):
                                 or when multiple value fields were specified.
 
     .. seealso::                When multiple fields should be stored in the lookup,
-                                the :class:`gpf.tools.lookup.RowLookup` class should be used instead.
+                                the :class:`~gpf.lookups.RowLookup` class should be used instead.
     """
 
     def __init__(self, table_path, key_field, value_field, where_clause=None, **kwargs):
@@ -237,7 +237,7 @@ class RowLookup(_BaseLookup):
                                 or when a single value field was specified.
 
     .. seealso::                When a single field value should be stored in the lookup,
-                                the :class:`gpf.tools.lookup.ValueLookup` class should be used instead.
+                                the :class:`~gpf.lookups.ValueLookup` class should be used instead.
     """
 
     def __init__(self, table_path, key_field, value_fields, where_clause=None, **kwargs):
