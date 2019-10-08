@@ -17,9 +17,10 @@
 """
 The metadata module contains functions and classes that help describing data.
 """
+
 import gpf.common.textutils as _tu
-import gpf.tools.cursors as _cursors
-from gpf.tools import arcpy as _arcpy
+import gpf.cursors as _cursors
+from gpf import arcpy as _arcpy
 
 _ATTR_FIELDS = 'fields'
 

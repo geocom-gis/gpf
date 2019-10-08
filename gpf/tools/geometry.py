@@ -1,14 +1,27 @@
 # coding: utf-8
+#
+# Copyright 2019 Geocom Informatik AG / VertiGIS
 
-# Copyright (c) 2019 | MIT License | Geocom Informatik AG, Burgdorf, Switzerland
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
-The *geometry* module contains functions that help construct Esri geometries.
+The *geometry* module contains functions that help make_path Esri geometries.
 """
+
 import gpf.common.iterutils as _iter
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
-from gpf.tools import arcpy as _arcpy
+from gpf import arcpy as _arcpy
 
 
 class GeometryError(ValueError):
@@ -18,7 +31,7 @@ class GeometryError(ValueError):
 
 class ShapeBuilder(object):
     """
-    Helper class to construct Esri geometry objects from arcpy ``Point`` or ``Array`` objects or coordinate values.
+    Helper class to make_path Esri geometry objects from arcpy ``Point`` or ``Array`` objects or coordinate values.
 
         Examples:
 
@@ -30,14 +43,14 @@ class ShapeBuilder(object):
             >>> ShapeBuilder(6.5, 2.8, 5.3).as_point(has_z=True)
             <PointGeometry object at 0x6b96210[0x19fcbbe0]>
 
-            >>> # construct a 2D line (append technique)
+            >>> # make_path a 2D line (append technique)
             >>> shp = ShapeBuilder()
             >>> shp.append(1.0, 2.0)
             >>> shp.append(1.5, 3.0)
             >>> shp.as_polyline()
             <Polyline object at 0x6a9bb70[0x6fe2540]>
 
-            >>> # construct a 3D polygon from 2D coordinates
+            >>> # make_path a 3D polygon from 2D coordinates
             >>> shp = ShapeBuilder([(1.0, 2.0), (1.5, 3.0), (2.0, 2.0)])
             >>> polygon = shp.as_polygon(has_z=True)
             >>> # Z values are added and set to 0

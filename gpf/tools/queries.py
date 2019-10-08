@@ -17,11 +17,12 @@
 """
 Module that facilitates working with basic SQL expressions and where clauses in ArcGIS.
 """
+
 import gpf.common.guids as _guids
 import gpf.common.iterutils as _iter
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
-from gpf.tools import arcpy as _arcpy
+from gpf import arcpy as _arcpy
 
 WHERE_KWARG = 'where_clause'
 _CHECK_ARG = 'check_only'
@@ -44,7 +45,7 @@ class Where(object):
 
     Basic query helper class to build basic SQL expressions for ArcPy tools where clauses.
     Using the ``&`` and ``|`` bitwise operators, a user can "daisy chain" multiple statements.
-    When used in combination with the :py:mod:`gpf.tools.cursors` module, the Where clause can be passed-in directly.
+    When used in combination with the :py:mod:`gpf.cursors` module, the Where clause can be passed-in directly.
     In other cases (e.g. *arcpy* tools), the resulting SQL expression is obtained using ``str()`` or ``repr()``.
 
     Example of a simple query:
@@ -76,7 +77,7 @@ class Where(object):
                         Multiple values and iterables will all be flattened (one level), sorted and de-duped.
                         For the *is null* and *is not null* operators, values will be ignored.
                         For all operators except *(not) between* and *(not) in*, only the first value will be used.
-    :type where_field:  str, unicode, gpf.tools.queries.Where
+    :type where_field:  str, unicode, ~gpf.tools.queries.Where
     :type operator:     str, unicode
     """
 
@@ -125,7 +126,7 @@ class Where(object):
 
         :param other:   Another ``Where`` instance.
         :return:        The combined new ``Where`` instance.
-        :rtype:         gpf.tools.queries.Where
+        :rtype:         ~gpf.tools.queries.Where
         """
         return self._combine(self.__SQL_OR, other)
 
@@ -140,7 +141,7 @@ class Where(object):
 
         :param other:   Another ``Where`` instance.
         :return:        The combined new ``Where`` instance.
-        :rtype:         gpf.tools.queries.Where
+        :rtype:         ~gpf.tools.queries.Where
         """
         return self._combine(self.__SQL_AND, other)
 
@@ -247,7 +248,7 @@ class Where(object):
         :param operator:    The operator to use (AND/OR).
         :param where:       Another Where instance.
         :return:            The combined new Where instance.
-        :rtype:             gpf.tools.queries.Where
+        :rtype:             ~gpf.tools.queries.Where
         """
         _vld.pass_if(isinstance(where, self.__class__), TypeError, '{!r} is not a valid Where instance'.format(where))
 
