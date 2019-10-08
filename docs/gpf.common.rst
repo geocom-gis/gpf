@@ -10,7 +10,6 @@ Submodules
    gpf.common.containers
    gpf.common.guids
    gpf.common.iterutils
-   gpf.common.paths
    gpf.common.textutils
    gpf.common.validate
 
