@@ -17,11 +17,11 @@
 """
 Module that simplifies working with layers in ArcMap.
 """
-import gpf.common.paths as _paths
+
+import gpf.paths as _paths
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
-from gpf.tools import arcpy as _arcpy
-from gpf.tools.workspace import split_gdbpath as _split
+from gpf import arcpy as _arcpy
 
 
 def get_mxd(path=None):
@@ -188,9 +188,9 @@ def get_referenced_layers(dataset_path, mxd=None, dataframe=None, strict=True):
             layers.append(lyr)
             continue
         if not strict:
-            lyr_parts = _split(lyr_path)[1:]
+            lyr_parts = _paths.split_gdbpath(lyr_path)[1:]
             if not ds_parts:
-                ds_parts = _split(dataset_path)[1:]
+                ds_parts = _paths.split_gdbpath(dataset_path)[1:]
             if lyr_parts == ds_parts:
                 layers.append(lyr)
     return layers
