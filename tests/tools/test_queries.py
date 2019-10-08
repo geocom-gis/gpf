@@ -16,9 +16,7 @@
 
 import pytest
 
-from gpf.tools.queries import OperatorError
-from gpf.tools.queries import Where
-from gpf.tools.queries import InitError
+from gpf.tools.queries import *
 
 
 def test_where_bad_init():
