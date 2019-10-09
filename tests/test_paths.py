@@ -22,27 +22,53 @@ import gpf.paths as paths
 
 
 def test_explode():
+    with pytest.raises(TypeError):
+        paths.explode(None)
+        paths.explode(1)
     assert paths.explode(r'C:/temp/test.gdb') == ('C:\\temp', 'test', '.gdb')
     assert paths.explode(r'C:/temp/folder') == ('C:\\temp', 'folder', '')
 
 
 def test_normalize():
+    with pytest.raises(TypeError):
+        paths.normalize(None)
+        paths.normalize(1)
     assert paths.normalize(r'A/B\C') == 'a\\b\\c'
     assert paths.normalize(r'A/b\c', False) == 'A\\b\\c'
 
 
 def test_join():
+    with pytest.raises(TypeError):
+        paths.concat()
+        paths.concat(None)
+        paths.concat(1, 2, 3)
     assert paths.concat('a', 'b', 'c') == 'a\\b\\c'
 
 
-def get_abs():
+def test_getabs():
+    with pytest.raises(TypeError):
+        paths.get_abs(None)
+        paths.get_abs(1)
+        paths.get_abs('test', 2)
     curdir = os.path.dirname(__file__)
     assert paths.get_abs('test.txt') == os.path.join(curdir, 'test.txt')
     assert paths.get_abs('test.txt', os.path.dirname(curdir)) == os.path.join(os.path.dirname(curdir), 'test.txt')
     assert paths.get_abs(__file__) == os.path.normpath(__file__)
 
 
-def test_pathmanager_bad_init():
+def test_findparent():
+    with pytest.raises(TypeError):
+        paths.find_parent(None, None)
+        paths.find_parent(1, 2)
+    test_dir = 'C:\\Projects\\parent\\LEVEL0\\level1\\level2.txt'
+    assert paths.find_parent(test_dir, 'level0') == 'C:\\Projects\\parent'
+    assert paths.find_parent(test_dir, 'LEVEL0') == 'C:\\Projects\\parent'
+    assert paths.find_parent(test_dir, 'Level') == ''
+    assert paths.find_parent(test_dir, 'c:') == ''
+    assert paths.find_parent(test_dir, '?') == ''
+
+
+def test_path_bad_init():
     with pytest.raises(TypeError):
         paths.Path(None)
         paths.Path('')
@@ -50,7 +76,7 @@ def test_pathmanager_bad_init():
         paths.Path(r'C:\directory\file.ext', r'C:\directory')
 
 
-def test_pathmanager_bad_file():
+def test_path_bad_file():
     pm = paths.Path(r'C:\directory\file.ext')
     assert not pm.is_file
     assert not pm.is_dir
@@ -62,7 +88,7 @@ def test_pathmanager_bad_file():
     assert pm.make_path('sub1', 'sub2') == 'C:\\directory\\sub1\\sub2\\file.ext'
 
 
-def test_pathmanager_bad_dir():
+def test_path_bad_dir():
     pm = paths.Path(r'C:\directory\test')
     assert not pm.is_file
     assert not pm.is_dir
@@ -74,7 +100,7 @@ def test_pathmanager_bad_dir():
     assert pm.make_path('sub1', 'sub2') == 'C:\\directory\\test\\sub1\\sub2'
 
 
-def test_pathmanager_good_file():
+def test_path_good_file():
     file_name = os.path.basename(__file__)
     dir_path = os.path.dirname(__file__)
     pm = paths.Path(__file__)
@@ -88,7 +114,7 @@ def test_pathmanager_good_file():
     assert pm.make_path('sub1', 'sub2') == os.path.join(dir_path, 'sub1', 'sub2', file_name)
 
 
-def test_pathmanager_good_dir():
+def test_path_good_dir():
     dir_path = os.path.dirname(__file__)
     dir_name = os.path.basename(dir_path)
     pm = paths.Path(dir_path)
@@ -117,27 +143,27 @@ def test_isgdbpath():
         paths.split_gdbpath('C:\\test.gdb\\a\\b\\c')
 
 
-def test_wsmanager_gdb():
-    wm = paths.Workspace('test.gdb', qualifier='TEST', base='C:\\temp', separator='|')
-    assert wm.root == paths.Workspace('C:\\temp\\test.gdb')
-    assert wm.qualifier == ''
-    assert wm.separator == ''
-    assert wm.make_path('ele', 'ele_kabel') == 'C:\\temp\\test.gdb\\ele\\ele_kabel'
-    wm = paths.Workspace('C:\\temp\\test.gdb')
-    assert not wm.exists
-    assert wm.root == paths.Workspace('C:\\temp\\test.gdb')
-    assert wm.get_parent(str(wm)) == 'C:\\temp\\test.gdb'
-    assert wm.get_parent(str(wm), True) == 'C:\\temp'
-    assert wm.get_root(str(wm)) == 'C:\\temp\\test.gdb'
-    assert wm.is_gdb is True
-    assert wm.qualifier == ''
-    assert wm.separator == ''
-    assert wm.qualify('test', 'my_qualifier') == 'test'
+def test_workspace_gdb():
+    ws = paths.Workspace('test.gdb', qualifier='TEST', base='C:\\temp', separator='|')
+    assert ws.root == paths.Workspace('C:\\temp\\test.gdb')
+    assert ws.qualifier == ''
+    assert ws.separator == ''
+    assert ws.make_path('ele', 'ele_kabel') == 'C:\\temp\\test.gdb\\ele\\ele_kabel'
+    ws = paths.Workspace('C:\\temp\\test.gdb')
+    assert not ws.exists
+    assert ws.root == paths.Workspace('C:\\temp\\test.gdb')
+    assert ws.get_parent(str(ws)) == 'C:\\temp\\test.gdb'
+    assert ws.get_parent(str(ws), True) == 'C:\\temp'
+    assert ws.get_root(str(ws)) == 'C:\\temp\\test.gdb'
+    assert ws.is_gdb is True
+    assert ws.qualifier == ''
+    assert ws.separator == ''
+    assert ws.qualify('test', 'my_qualifier') == 'test'
     with pytest.raises(ValueError):
-        wm.qualify('')
-    assert wm.make_path('ele', 'ele_kabel') == 'C:\\temp\\test.gdb\\ele\\ele_kabel'
+        ws.qualify('')
+    assert ws.make_path('ele', 'ele_kabel') == 'C:\\temp\\test.gdb\\ele\\ele_kabel'
     with pytest.raises(IndexError):
-        wm.make_path('p1', 'p2', 'p3')
+        ws.make_path('p1', 'p2', 'p3')
     assert paths.Workspace.get_root('C:\\temp\\test.shp') == 'C:\\temp'
     assert paths.Workspace.get_parent('C:\\temp\\test.shp') == 'C:\\temp'
-    assert wm.get_root('C:\\temp\\test.gdb\\ele\\ele_kabel') == 'C:\\temp\\test.gdb'
+    assert ws.get_root('C:\\temp\\test.gdb\\ele\\ele_kabel') == 'C:\\temp\\test.gdb'

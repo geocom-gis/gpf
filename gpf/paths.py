@@ -19,7 +19,7 @@ Module that simplifies working with file or directory paths or Esri workspaces (
 """
 
 import inspect as _inspect
-import os
+import os as _os
 from collections import Counter as _Counter
 from warnings import warn as _warn
 
@@ -59,8 +59,10 @@ def explode(path):
         >>> explode(r'C:/temp/folder')
         ('C:\\temp', 'folder', '')
     """
-    head, tail = os.path.split(os.path.normpath(path))
-    name, ext = os.path.splitext(tail)
+    _vld.pass_if(isinstance(path, basestring), TypeError, 'path attribute must be a string')
+
+    head, tail = _os.path.split(_os.path.normpath(path))
+    name, ext = _os.path.splitext(tail)
     return head, name, ext
 
 
@@ -75,7 +77,9 @@ def normalize(path, lowercase=True):
     :type lowercase:    bool
     :rtype:             str, unicode
     """
-    norm_path = os.path.normpath(path)
+    _vld.pass_if(isinstance(path, basestring), TypeError, 'path attribute must be a string')
+
+    norm_path = _os.path.normpath(path)
     return norm_path.lower() if lowercase else norm_path
 
 
@@ -87,7 +91,9 @@ def concat(*args):
     :type args:     str, unicode
     :rtype:         str, unicode
     """
-    return os.path.normpath(os.path.join(*args))
+    _vld.pass_if(args and all(isinstance(a, basestring) for a in args), TypeError, 'all arguments must be strings')
+
+    return _os.path.normpath(_os.path.join(*args))
 
 
 def get_abs(path, base=None):
@@ -103,17 +109,76 @@ def get_abs(path, base=None):
     :rtype:             str, unicode
     :raises ValueError: If the *base* path is ``None`` and no valid base directory was found using the caller path.
     """
-    if os.path.isabs(path):
-        return os.path.normpath(path)
+    _vld.pass_if(isinstance(path, basestring), TypeError, 'path attribute must be a string')
+    _vld.pass_if(isinstance(base, (basestring, type(None))), TypeError, 'base attribute must be a string or None')
+
+    if _os.path.isabs(path):
+        return _os.path.normpath(path)
     if not base:
-        # Get the base path by looking at the which function called this one.
+        # Get the base path by looking at the function that called get_abs().
         # The caller frame should be the second frame (1) in the stack.
         # This returns a tuple of which the first value (0) is the frame object.
         frame = _inspect.stack()[1][0]
-        base = os.path.dirname(_inspect.getfile(frame))
-        if not os.path.isdir(base):
+        base = _os.path.dirname(_inspect.getfile(frame))
+        if not _os.path.isdir(base):
             raise ValueError('Failed to determine base path from caller')
     return concat(base, path)
+
+
+def find_parent(path, name):
+    """
+    Finds within *path* the parent directory that contains a file or directory with the given *name*.
+    Note that *path* and *name* values are matched case-insensitively, but the found path is returned
+    in the original case (as a normalized path).
+
+    If no matches have been found or the if the match has no parent, an empty string is returned.
+    If there are multiple matches, the parent path of the first match is returned.
+
+    Examples:
+
+        >>> find_parent('C:\\Projects\\parent\\LEVEL0\\level1\\level2.txt', 'level0')
+        'C:\\Projects\\parent'
+        >>> find_parent('C:\\Projects\\parent\\LEVEL\\level\\level.txt', 'level')
+        'C:\\Projects\\parent'
+        >>> find_parent('C:\\Projects\\some_dir', 'C:')
+        ''
+        >>> find_parent('C:\\Projects\\parent\\must_include_extension.txt', 'must_include_extension')
+        ''
+
+    :param path:    The path to search.
+    :param name:    The name for which to search the parent directory in *path*.
+                    This value can be a file name (with extension!) or a directory name.
+                    Partial paths, pre- or suffixes or regular expressions are not allowed here and will return None.
+    :type path:     str, unicode
+    :type name:     str, unicode
+    :rtype:         str, unicode
+    """
+
+    def match_parts(plist, n):
+        # Search for n in plist and yield the parts up to n
+        n_ci = n.lower()
+        if n_ci not in (p.lower() for p in plist):
+            return
+
+        for p in plist:
+            if p.lower() == n_ci:
+                return
+            yield p
+
+    # Get path type (unicode or str) so we correctly join the path parts without encoding issues
+    path_type = type(path)
+
+    # Validate arguments
+    _vld.pass_if(issubclass(path_type, basestring), TypeError, 'path attribute must be a string')
+    _vld.pass_if(isinstance(name, basestring), TypeError, 'name attribute must be a string')
+
+    # Split path into parts list, encode or decode name if name type does not match path type
+    parts = normalize(path, False).split(_os.sep)
+    if not isinstance(name, path_type):
+        name = _tu.to_str(name) if isinstance(name, unicode) else _tu.to_unicode(name)
+
+    # Return the concatenated path parts up til the match (or an empty string if nothing was found)
+    return path_type(_os.sep).join(match_parts(parts, name)) or path_type(_tu.EMPTY_STR)
 
 
 class Path(object):
@@ -140,15 +205,15 @@ class Path(object):
 
     def __init__(self, path, base=None):
         _vld.pass_if(_vld.is_text(path, False), TypeError, "Attribute 'path' should be a non-empty string")
-        self._path = os.path.normpath(path)
+        self._path = _os.path.normpath(path)
 
         if base:
-            _vld.raise_if(os.path.isabs(self._path), ValueError,
+            _vld.raise_if(_os.path.isabs(self._path), ValueError,
                           '{} expects a relative path when root has been set'.format(self.__class__.__name__))
             self._path = get_abs(self._path, base)
 
-        self._head, self._tail = os.path.split(self._path)
-        self._end, self._ext = os.path.splitext(self._tail)
+        self._head, self._tail = _os.path.split(self._path)
+        self._end, self._ext = _os.path.splitext(self._tail)
 
     @property
     def exists(self):
@@ -157,7 +222,7 @@ class Path(object):
 
         :rtype: bool
         """
-        return os.path.exists(self._path)
+        return _os.path.exists(self._path)
 
     @property
     def is_file(self):
@@ -166,7 +231,7 @@ class Path(object):
 
         :rtype: bool
         """
-        return os.path.isfile(self._path)
+        return _os.path.isfile(self._path)
 
     @property
     def is_dir(self):
@@ -175,7 +240,7 @@ class Path(object):
 
         :rtype: bool
         """
-        return os.path.isdir(self._path)
+        return _os.path.isdir(self._path)
 
     def extension(self, keep_dot=True):
         """
@@ -249,7 +314,7 @@ class Path(object):
             C:\\temp\\newfile.log
 
         """
-        base, ext = os.path.splitext(basename)
+        base, ext = _os.path.splitext(basename)
         return concat(self._head, '{}{}'.format(base, ext or self.extension()))
 
     def make_path(self, *parts):
@@ -406,7 +471,7 @@ def exists(path):
     :rtype:         bool
     """
     root = Workspace.get_root(path)
-    if not os.path.exists(root):
+    if not _os.path.exists(root):
         return False
     return _arcpy.Exists(path)
 
@@ -549,10 +614,10 @@ class Workspace(Path):
             >>> Workspace.get_parent(r'C:/temp/test.shp')
             'C:\\temp'
         """
-        parent_dir = os.path.normpath(os.path.dirname(path))
+        parent_dir = _os.path.normpath(_os.path.dirname(path))
         if outside_gdb or not is_gdbpath(path):
             return parent_dir
-        return os.path.normpath(path) if cls._is_gdb_root(path) else parent_dir
+        return _os.path.normpath(path) if cls._is_gdb_root(path) else parent_dir
 
     @classmethod
     def get_root(cls, path):
@@ -584,7 +649,7 @@ class Workspace(Path):
 
         if cls._is_gdb_root(parent):
             # return `parent` if it is the DB root workspace
-            return os.path.normpath(parent)
+            return _os.path.normpath(parent)
 
         # return parent of `parent` if `parent` is not the DB root workspace
         return cls.get_parent(parent)
@@ -637,7 +702,7 @@ class Workspace(Path):
 
         :rtype: bool
         """
-        return exists(self._path) if self.is_gdb else os.path.exists(self._path)
+        return exists(self._path) if self.is_gdb else _os.path.exists(self._path)
 
     @property
     def qualifier(self):
