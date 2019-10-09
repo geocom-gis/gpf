@@ -131,7 +131,7 @@ def find_parent(path, name):
     Note that *path* and *name* values are matched case-insensitively, but the found path is returned
     in the original case (as a normalized path).
 
-    If no matches have been found or the if the match has no parent, an empty string is returned.
+    If no matches have been found or if the match has no parent, an empty string is returned.
     If there are multiple matches, the parent path of the first match is returned.
 
     Examples:
