@@ -31,7 +31,7 @@ import os
 import sys
 from pkg_resources import get_distribution
 
-pkg_path = os.path.abspath('..\\..')
+pkg_path = os.path.abspath('../..')
 sys.path.insert(0, pkg_path)
 print("PACKAGE SEARCH PATH:")
 print(pkg_path)
