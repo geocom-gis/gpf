@@ -31,10 +31,17 @@ import os
 import sys
 from pkg_resources import get_distribution
 
+from warnings import warn
+from mock import MagicMock
+
 pkg_path = os.path.abspath('../..')
 sys.path.insert(0, pkg_path)
+
 print("PACKAGE SEARCH PATH:")
 print(pkg_path)
+
+sys.modules['arcpy'] = MagicMock()
+warn('The arcpy module has been replaced by a mock object', ImportWarning)
 
 # -- Project information -----------------------------------------------------
 
