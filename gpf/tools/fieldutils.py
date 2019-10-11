@@ -54,11 +54,11 @@ def get_missing(table, expected_fields):
         field = f.upper()
         if '@' in field:
             if desc is None:
-                desc = _meta.SpecialFields(table)
-            if (field == OBJECTID and not desc.objectid_field) or \
-               (field.startswith(SHAPE) and not desc.shape_field) or \
-               (field == SHAPE_LENGTH and not desc.length_field) or \
-               (field == SHAPE_AREA and not desc.area_field):
+                desc = _meta.Describe(table)
+            if (field == OBJECTID and not desc.OIDFieldName) or \
+               (field.startswith(SHAPE) and not desc.shapeFieldName) or \
+               (field == SHAPE_LENGTH and not desc.lengthFieldName) or \
+               (field == SHAPE_AREA and not desc.areaFieldName):
                 missing.append(f)
             continue
         if field not in table_fields:

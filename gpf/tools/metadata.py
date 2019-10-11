@@ -22,31 +22,49 @@ import gpf.common.textutils as _tu
 import gpf.cursors as _cursors
 from gpf import arcpy as _arcpy
 
-_ATTR_FIELDS = 'fields'
+from warnings import warn as _warn
+
+
+class DescribeWarning(RuntimeWarning):
+    """ The warning type that is shown when ArcPy's :func:`Describe` failed. """
+    pass
 
 
 # noinspection PyPep8Naming
 class Describe(object):
     """
     Wrapper class for the ArcPy ``Describe`` object.
-    This allows users to safely call Describe properties without errors, also when a property does not exist.
+    If ArcPy's :func:`Describe` failed, a warning will be shown but no errors will be (re)raised.
+    Any ``Describe`` property that is retrieved, will return ``None`` in this case.
+
     If a property does not exist, it will return ``None``. If this is not desired,
-    consider using the :func:`get` function, which behaves similar to a ``dict.get()``.
+    consider using the :func:`get` function, which behaves similar to a :func:`dict.get`.
 
     :param element:     The data element to describe.
     """
 
+    _ATTR_FIELDS = 'fields'
+    _ATTR_DATATYPE = 'dataType'
+    _ATTR_OIDFIELD = 'OIDFieldName'
+    _ATTR_SHPFIELD = 'shapeFieldName'
+    _ATTR_LENFIELD = 'lengthFieldName'
+    _ATTR_AREAFIELD = 'areaFieldName'
+    _ATTR_RASTERFIELD = 'rasterFieldName'
+    _ATTR_SUBTYPEFIELD = 'subtypeFieldName'
+    _ATTR_GLOBALIDFIELD = 'globalIDFieldName'
+
+    __slots__ = '_obj'
+
     def __init__(self, element):
-        self._error = None
+        self._obj = None
         try:
             self._obj = _arcpy.Describe(element)
-        except (OSError, RuntimeError, _arcpy.ExecuteError, AttributeError) as e:
-            self._error = e
-            self._obj = None
+        except Exception as e:
+            _warn(str(e), DescribeWarning)
 
-    def __getattr__(self, item):
+    def __getattr__(self, name):
         """ Returns the property value of a Describe object item. """
-        return getattr(self._obj, item, None)
+        return self._get(name)
 
     def __contains__(self, item):
         """ Checks if a Describe object has the specified property. """
@@ -58,35 +76,35 @@ class Describe(object):
             return True
         return False
 
-    def get(self, key, default=None):
-        """
-        Returns the property value of a Describe object item, returning *default* when not found.
+    def _get(self, name):
+        if not hasattr(self._obj, name) and name not in ('__dict__', '__members__', '__methods__'):
+            _warn('Describe object of type {} does not have a {} attribute'.
+                  format(_tu.to_repr(self.dataType), _tu.to_repr(name)), Warning)
+            return None
+        return getattr(self._obj, name)
 
-        :param key:     The name of the property.
+    def get(self, name, default=None):
+        """
+        Returns the value of a ``Describe`` object attribute by *name*, returning *default* when it has not been found.
+        This method does not show warnings or raise errors if the attribute does not exist.
+
+        :param name:    The name of the property.
         :param default: The default value to return in case the property was not found.
-        :type key:      str
+        :type name:     str
         """
-        return getattr(self._obj, key, default)
-
-    @property
-    def error(self):
-        """
-        If the Describe failed because of an error, this will return the error instance (or ``None`` otherwise).
-
-        :rtype:     Exception, None
-        """
-        return self._error
+        return getattr(self._obj, name, default)
 
     def num_rows(self, where_clause=None):
         """
         Returns the number of rows in the table or feature class.
 
-        If the described object does not support this action or does not have any rows, 0 will be returned.
+        If the current Describe object does not support this action or does not have any rows, 0 will be returned.
 
         :param where_clause:    An optional where clause to base the row count on.
-        :type where_clause:     str, unicode, gpf.tools.queries.Where
+        :type where_clause:     str, unicode, ~gpf.tools.queries.Where
         :rtype:                 int
         """
+        field = None
         if where_clause:
             if isinstance(where_clause, basestring):
                 field = _tu.unquote(where_clause.split()[0])
@@ -95,23 +113,26 @@ class Describe(object):
             else:
                 raise ValueError('where_clause must be a string or Where instance')
 
-            # Iterate over the dataset rows, using the (first) field from the where_clause
-            with _cursors.SearchCursor(self.catalogPath, field, where_clause=where_clause) as rows:
-                num_rows = sum(1 for _ in rows)
-            del rows
-
-        else:
-            # Use the ArcPy GetCount() tool for the row count
-            num_rows = int(_arcpy.GetCount_management(self.catalogPath).getOutput(0))
+        try:
+            if field:
+                # Iterate over the dataset rows, using the (first) field from the where_clause
+                with _cursors.SearchCursor(self.catalogPath, field, where_clause=where_clause) as rows:
+                    num_rows = sum(1 for _ in rows)
+                del rows
+            else:
+                # Use the ArcPy GetCount() tool for the row count
+                num_rows = int(_arcpy.GetCount_management(self.catalogPath).getOutput(0))
+        except Exception as e:
+            _warn(str(e), DescribeWarning)
+            num_rows = 0
 
         return num_rows
 
-    def fields(self, names_only=False, uppercase=False):
+    def get_fields(self, names_only=True, uppercase=False):
         """
         Returns a list of all fields in the described object (if any).
 
-        :param names_only:  When ``True`` (default=``False``),
-                            a list of field names instead of ``Field`` instances is returned.
+        :param names_only:  When ``True`` (default), a list of field names instead of ``Field`` instances is returned.
         :param uppercase:   When ``True`` (default=``False``), the returned field names will be uppercase.
                             This also applies when *names_only* is set to return ``Field`` instances.
         :type names_only:   bool
@@ -119,8 +140,11 @@ class Describe(object):
         :return:            List of field names or ``Field`` instances.
         :rtype:             list
         """
-        if _ATTR_FIELDS not in self:
+        if Describe._ATTR_FIELDS not in self:
+            _warn('Describe object of type {} does not have a {} attribute'.
+                  format(_tu.to_repr(self.dataType), _tu.to_repr(Describe._ATTR_FIELDS)), Warning)
             return []
+
         fields = [field.name if names_only else field for field in self._obj.fields]
         if uppercase:
             if names_only:
@@ -130,13 +154,12 @@ class Describe(object):
                     f.name = f.name.upper()
         return fields
 
-    def editable_fields(self, names_only=False, uppercase=False):
+    def get_editable_fields(self, names_only=True, uppercase=False):
         """
         For data elements that have a *fields* property (e.g. Feature classes, Tables and workspaces),
         this will return a list of all editable (writable) fields.
 
-        :param names_only:  When ``True`` (default=``False``),
-                            a list of field names instead of ``Field`` instances is returned.
+        :param names_only:  When ``True`` (default), a list of field names instead of ``Field`` instances is returned.
         :param uppercase:   When ``True`` (default=``False``), the returned field names will be uppercase.
                             This also applies when *names_only* is set to return ``Field`` instances.
         :type names_only:   bool
@@ -144,82 +167,94 @@ class Describe(object):
         :return:            List of field names or ``Field`` instances.
         :rtype:             list
         """
+        if Describe._ATTR_FIELDS not in self:
+            _warn('Describe object of type {} does not have a {} attribute'.
+                  format(_tu.to_repr(self.dataType), _tu.to_repr(Describe._ATTR_FIELDS)), Warning)
+            return []
+
         return [field.name if names_only else field for field in self.fields(uppercase=uppercase) if field.editable]
 
     @property
-    def special_fields(self):
+    def dataType(self):
         """
-        Returns a container object with all special/reserved Esri fields (e.g. Shape, ObjectID, Area, etc.).
+        Returns the data type for this ``Describe`` object.
+        All ``Describe`` objects should have this property.
+        If it returns ``None``, the object has not been successfully retrieved.
 
-        :rtype: SpecialFields
+        :rtype:     unicode
         """
-        return SpecialFields(self)
+        if not self:
+            _warn('{} object is empty'.format(_tu.to_repr(Describe.__name__)), Warning)
+            return None
 
-
-class SpecialFields(object):
-    """
-    Describe-like object for special/reserved Esri fields (e.g. Shape, ObjectID, Area, etc.).
-    All the special field names are exposed as attributes on this object. If any of the field names do not exist
-    for the specified table or feature class, its value remains ``None``.
-
-    :param element:     The path to the table or feature class for which to retrieve the field names
-                        or a ``Describe`` object.
-    """
-
-    FIELD_GLOBALID = 'globalIDFieldName'
-    FIELD_OBJECTID = 'OIDFieldName'
-    FIELD_SHAPE = 'shapeFieldName'
-    FIELD_AREA = 'areaFieldName'
-    FIELD_LENGTH = 'lengthFieldName'
-    FIELD_RASTER = 'rasterFieldName'
-    FIELD_SUBTYPE = 'subtypeFieldName'
-
-    __slots__ = '_names',
-
-    def __init__(self, element):
-        self._names = {}
-        meta = element if isinstance(element, (Describe, _arcpy.Describe)) else Describe(element)
-        if hasattr(meta, 'error') and meta.error:
-            return
-        self._setnames(meta)
-
-    def _setnames(self, describe):
-        for esri_attr in (f for f in dir(self) if f.startswith('FIELD_')):
-            self._names[esri_attr] = getattr(describe, esri_attr, None) or None
-
-    # For some reason, PyCharm does not like dynamic properties, so we use explicit properties here
+        return self._obj.dataType
 
     @property
-    def globalid_field(self):
-        """ Global ID field name. """
-        return self._names.get(self.FIELD_GLOBALID)
+    def globalIDFieldName(self):
+        """
+        Global ID field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_GLOBALIDFIELD)
 
     @property
-    def objectid_field(self):
-        """ Object ID field name. """
-        return self._names.get(self.FIELD_OBJECTID)
+    def OIDFieldName(self):
+        """
+        Object ID field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_OIDFIELD)
 
     @property
-    def shape_field(self):
-        """ Perimeter or polyline length field name. """
-        return self._names.get(self.FIELD_SHAPE)
+    def shapeFieldName(self):
+        """
+        Perimeter or polyline length field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_SHPFIELD)
 
     @property
-    def length_field(self):
-        """ Perimeter or polyline length field name. """
-        return self._names.get(self.FIELD_LENGTH)
+    def lengthFieldName(self):
+        """
+        Perimeter or polyline length field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_LENFIELD)
 
     @property
-    def area_field(self):
-        """ Polygon area field name. """
-        return self._names.get(self.FIELD_AREA)
+    def areaFieldName(self):
+        """
+        Polygon area field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_AREAFIELD)
 
     @property
-    def raster_field(self):
-        """ Raster field name. """
-        return self._names.get(self.FIELD_RASTER)
+    def rasterFieldName(self):
+        """
+        Raster field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_RASTERFIELD)
 
     @property
-    def subtype_field(self):
-        """ Subtype field name. """
-        return self._names.get(self.FIELD_SUBTYPE)
+    def subtypeFieldName(self):
+        """
+        Subtype field name.
+        Returns ``None`` if the field is missing or if the ``Describe`` object is not a dataset.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_SUBTYPEFIELD)

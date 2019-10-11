@@ -101,9 +101,8 @@ class _BaseLookup(dict):
         :rtype:                 list
         """
         desc = _metadata.Describe(table_path)
-        _vld.raise_if(desc.error, RuntimeError,
-                      'Failed to create lookup for {}: {}'.format(_tu.to_repr(table_path), desc.error))
-        return desc.fields(True, True)
+        _vld.pass_if(desc, RuntimeError, 'Failed to create lookup for {}'.format(_tu.to_repr(table_path)))
+        return desc.get_fields(True, True)
 
     @staticmethod
     def _check_fields(user_fields, table_fields):
@@ -267,7 +266,7 @@ class RowLookup(_BaseLookup):
                     self[key] = values
         except Exception as e:
             raise RuntimeError('Failed to create {} for {}: {}'.format(RowLookup.__name__,
-                                                                       _tu.to_repr(table_path), e))
+                                                                       _tu.to_repr(table_path), str(e)))
 
     def get_fieldvalue(self, key, field, default=None):
         """
