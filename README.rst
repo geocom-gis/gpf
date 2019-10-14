@@ -40,6 +40,13 @@ Geocom customers who need to write GEONIS menu or form scripts should also look 
 .. _GEONIS: https://geonis.com/en/solutions/framework/geonis
 .. _gntools: https://pypi.org/project/gntools
 
+Documentation
+-------------
+
+The complete ``gpf`` documentation can be found at `Read the Docs`_.
+
+.. _Read the Docs: https://gpf.readthedocs.io/
+
 Requirements
 ------------
 
@@ -55,13 +62,6 @@ When ``pip`` is installed, the user can simply run:
     ``python -m pip install gpf``
 
 .. _pip: https://pip.pypa.io/en/stable/installing/
-
-Documentation
--------------
-
-The complete ``gpf`` documentation can be found at `Read the Docs`_.
-
-.. _Read the Docs: https://gpf.readthedocs.io/
 
 License
 -------
