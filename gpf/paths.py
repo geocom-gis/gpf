@@ -93,7 +93,7 @@ def concat(*args):
     """
     _vld.pass_if(args and all(isinstance(a, basestring) for a in args), TypeError, 'all arguments must be strings')
 
-    return _os.path.normpath(_os.path.join(*args))
+    return normalize(_os.path.join(*args), False)
 
 
 def get_abs(path, base=None):
@@ -113,13 +113,14 @@ def get_abs(path, base=None):
     _vld.pass_if(isinstance(base, (basestring, type(None))), TypeError, 'base attribute must be a string or None')
 
     if _os.path.isabs(path):
-        return _os.path.normpath(path)
+        return normalize(path, False)
     if not base:
         # Get the base path by looking at the function that called get_abs().
         # The caller frame should be the second frame (1) in the stack.
         # This returns a tuple of which the first value (0) is the frame object.
+        # Note: that path returned by inspect.getabsfile() is lower case!
         frame = _inspect.stack()[1][0]
-        base = _os.path.dirname(_inspect.getfile(frame))
+        base = _os.path.dirname(_inspect.getabsfile(frame))
         if not _os.path.isdir(base):
             raise ValueError('Failed to determine base path from caller')
     return concat(base, path)

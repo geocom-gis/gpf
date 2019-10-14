@@ -51,7 +51,8 @@ def test_getabs():
         paths.get_abs(1)
         paths.get_abs('test', 2)
     curdir = os.path.dirname(__file__)
-    assert paths.get_abs('test.txt') == os.path.join(curdir, 'test.txt')
+    # inspect.getabsfile() returns lower case
+    assert paths.get_abs('test.txt') == os.path.join(curdir, 'test.txt').lower()
     assert paths.get_abs('test.txt', os.path.dirname(curdir)) == os.path.join(os.path.dirname(curdir), 'test.txt')
     assert paths.get_abs(__file__) == os.path.normpath(__file__)
 
