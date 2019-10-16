@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gpf.lookups import coord_key
+from gpf.lookups import get_nodekey
 
 
 def test_coord_key():
     coord = (4.2452, 23.24541)
-    assert coord_key(*coord) == (42451, 232454)
-    assert coord_key(53546343.334242254, 23542233.354352246) == (535463433342L, 235422333543L)
-    assert coord_key(1, 2, 3) == (10000, 20000, 30000)
+    assert get_nodekey(*coord) == (42451, 232454)
+    assert get_nodekey(53546343.334242254, 23542233.354352246) == (535463433342L, 235422333543L)
+    assert get_nodekey(1, 2, 3) == (10000, 20000, 30000)

@@ -24,7 +24,8 @@ from abc import abstractmethod
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 import gpf.cursors as _cursors
-import gpf.tools.metadata as _metadata
+import gpf.tools.metadata as _meta
+import gpf.tools.geometry as _geo
 
 _DUPEKEYS_ARG = 'duplicate_keys'
 _MUTABLE_ARG = 'mutable_values'
@@ -32,13 +33,13 @@ _SINGLEVAL_ARG = 'single_value'
 
 _FLD_SHAPEXY = 'SHAPE@XY'
 
-#: The default (Esri-recommended) resolution that is used by the :func:`coord_key` function (i.e. for lookups).
+#: The default (Esri-recommended) resolution that is used by the :func:`get_nodekey` function (i.e. for lookups).
 #: If coordinate values fall within this distance, they are considered equal.
 #: Set this to a higher or lower value (coordinate system units) if required.
 XYZ_RESOLUTION = 0.0001
 
 
-def coord_key(x, y, z=None):
+def get_nodekey(*args):
     """
     This function creates a hash-like tuple that can be used as a key in a :class:`RowLookup` or
     :class:`ValueLookup` dictionary.
@@ -64,18 +65,29 @@ def coord_key(x, y, z=None):
         >>> key = key(*coord)
         >>> print(key)
         (42451, 232454)
-        >>> coord_lookup.get(coord_key)
+        >>> coord_lookup.get(get_nodekey)
         '{628ee94d-2063-47be-b57f-8c2af6345d4e}'
 
-    :param x:   The X value of the coordinate.
-    :param y:   The Y value of the coordinate.
-    :param z:   An optional Z value of the coordinate (if 3D).
-    :type x:    int, float
-    :type y:    int, float
-    :type z:    int, float
-    :rtype:     tuple
+    :param args:    A minimum of 2 numeric values, an EsriJSON dictionary, an ArcPy Point or PointGeometry instance.
+    :rtype:         tuple
     """
-    return tuple(int(v / XYZ_RESOLUTION) for v in (x, y, z) if v is not None)
+    return tuple(int(v / XYZ_RESOLUTION) for v in _geo.get_xyz(*args) if v is not None)
+
+
+def get_coordtuple(node_key):
+    """
+    This function converts a node key (created by :func:`get_nodekey`) of integer tuples
+    back into a floating point coordinate X, Y(, Z) tuple.
+
+    .. warning::    This function should **only** be used to generate output for printing/logging purposes or to create
+                    approximate coordinates. Because :func:`get_nodekey` truncates the coordinate, it is impossible
+                    to get the same coordinate value back as the one that was used to create the node key, which means
+                    that some accuracy will be lost in the process.
+
+    :param node_key:    The node key (tuple of integers) that has to be converted.
+    :rtype:             tuple
+    """
+    return tuple((v * XYZ_RESOLUTION) for v in node_key)
 
 
 class _BaseLookup(dict):
@@ -100,7 +112,7 @@ class _BaseLookup(dict):
         :raises RuntimeError:   When the table metadata could not be retrieved.
         :rtype:                 list
         """
-        desc = _metadata.Describe(table_path)
+        desc = _meta.Describe(table_path)
         _vld.pass_if(desc, RuntimeError, 'Failed to create lookup for {}'.format(_tu.to_repr(table_path)))
         return desc.get_fields(True, True)
 
@@ -145,7 +157,7 @@ class ValueLookup(_BaseLookup):
     :param table_path:          Full source table or feature class path.
     :param key_field:           The field to use for the ValueLookup dictionary keys.
                                 If `SHAPE@XY` is used as the key field, the coordinates are "hashed" using the
-                                :func:`~gpf.lookups.coord_key` function.
+                                :func:`~gpf.lookups.get_nodekey` function.
                                 This means, that the user should use this function as well in order to
                                 to create a coordinate key prior to looking up the matching value for it.
     :param value_field:         The single field to include in the ValueLookup dictionary value.
@@ -186,7 +198,7 @@ class ValueLookup(_BaseLookup):
                 if key is None:
                     continue
                 if self._iscoordkey:
-                    key = coord_key(*key)
+                    key = get_nodekey(*key)
                 if dupe_keys:
                     v = self.setdefault(key, [])
                     v.append(value)
@@ -210,7 +222,7 @@ class RowLookup(_BaseLookup):
     :param table_path:          Full table or feature class path.
     :param key_field:           The field to use for the RowLookup dictionary keys.
                                 If `SHAPE@XY` is used as the key field, the coordinates are "hashed" using the
-                                :func:`gpf.tools.lookup.coord_key` function.
+                                :func:`gpf.tools.lookup.get_nodekey` function.
                                 This means, that the user should use this function as well in order to
                                 to create a coordinate key prior to looking up the matching values for it.
     :param value_fields:        The fields to include in the RowLookup dictionary values.
@@ -228,7 +240,7 @@ class RowLookup(_BaseLookup):
     :type table_path:           str, unicode
     :type key_field:            str, unicode
     :type value_fields:         list, tuple
-    :type where_clause:         str, unicode, gpf.tools.queries.Where
+    :type where_clause:         str, unicode, ~gpf.tools.queries.Where
     :type duplicate_keys:       bool
     :type mutable_values:       bool
     :raises RuntimeError:       When the lookup cannot be created or populated.
@@ -258,7 +270,7 @@ class RowLookup(_BaseLookup):
                 if key is None:
                     continue
                 if self._iscoordkey:
-                    key = coord_key(*key)
+                    key = get_nodekey(*key)
                 if dupe_keys:
                     v = self.setdefault(key, [])
                     v.append(values)
@@ -304,3 +316,72 @@ class RowLookup(_BaseLookup):
             return row[self._fieldmap[field.lower()]]
         except LookupError:
             return default
+
+
+class NodeSet(set):
+    """
+    Builds a set of unique node keys for coordinates in a feature class. For the hashes, the :func:`get_nodekey`
+    function will be used.
+
+    For feature classes with a geometry type other than Point, a NodeSet will be built from the first and last
+    points in a geometry. If this is not desired (i.e. all coordinates should be included), the user should set
+    the *all_vertices* option to ``True``.
+    An exception to this behavior is the Multipoint geometry: for this type, all coordinates will always be included.
+
+    :param fc_path:         The full path to the feature class.
+    :param where_clause:    An optional where clause to filter the feature class.
+    :param all_vertices:    Defaults to ``False``. When set to ``True``, all geometry coordinates are included.
+                            Otherwise, only the first and/or last points are considered.
+    :type fc_path:          str, unicode
+    :type where_clause:     str, unicode, ~gpf.tools.queries.Where
+    :type all_vertices:     bool
+    """
+
+    def __init__(self, fc_path, where_clause=None, all_vertices=False):
+        super(NodeSet, self).__init__()
+        self._populate(fc_path, where_clause, all_vertices)
+
+    @staticmethod
+    def _get_shapetype(fc_path):
+        # Checks if the feature class has the correct geometry type and returns it
+        desc = _meta.Describe(fc_path)
+        if not desc.shapeFieldName:
+            raise ValueError('Input dataset {} is not a feature class'.format(_tu.to_repr(fc_path)))
+        if desc.shapeType == 'MultiPatch':
+            raise ValueError('Geometry type of {} is not supported'.format(_tu.to_repr(fc_path)))
+        return desc.shapeType
+
+    def _populate(self, fc_path, where_clause, all_vertices):
+        """ Populates the NodeSet with node keys. """
+
+        # The fastest way to fetch results is by reading coordinate tuples
+        field = _FLD_SHAPEXY
+        is_multipoint = False
+        shape_type = self._get_shapetype(fc_path)
+        if shape_type != 'Point':
+            # However, for geometry types other than Point, we need to read the Shape object
+            field = 'SHAPE@'
+        if shape_type == 'Multipoint':
+            # Multipoints will be treated differently (always read all vertices)
+            is_multipoint = True
+
+        # Iterate over all geometries and add keys
+        with _cursors.SearchCursor(fc_path, field, where_clause) as rows:
+            for shape, in rows:
+                # If the geometry is a simple coordinate tuple, immediately add it
+                if isinstance(shape, tuple):
+                    self.add(get_nodekey(*shape))
+                    continue
+
+                if all_vertices or is_multipoint:
+                    for part in shape:
+                        if is_multipoint:
+                            self.add(get_nodekey(part))
+                            continue
+                        for point in part:
+                            self.add(get_nodekey(point))
+                    continue
+
+                # When *all_vertices* is False or the geometry is not a Multipoint
+                self.add(get_nodekey(shape.firstPoint))
+                self.add(get_nodekey(shape.lastPoint))
