@@ -14,11 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 import pytest
+from mock import Mock
 
 from gpf.tools.geometry import *
 
 
+@pytest.mark.skipif(isinstance(sys.modules['arcpy'], Mock), reason="arcpy is not available")
 def test_getxyz():
     with pytest.raises(ValueError):
         get_xyz(1, 2, 'test')
