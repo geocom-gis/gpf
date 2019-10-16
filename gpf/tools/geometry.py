@@ -220,3 +220,48 @@ class ShapeBuilder(object):
             coords = _arcpy.Array(c for c in self._arr)
             coords.append(self._arr[0])
         return self._output(_arcpy.Polygon, coords, spatial_reference, has_z, has_m)
+
+
+def _parse_xyz(*args):
+    """
+    Validates if the input arguments are numeric and returns a generator of 3 numbers.
+    The last value may be ``None`` (if Z value is omitted).
+    """
+    for i in xrange(3):
+        try:
+            v = args[i]
+        except IndexError:
+            v = None
+        test = _vld.is_number(v)
+        if i == 2:
+            test = test or v is None
+        _vld.pass_if(test, ValueError, 'Failed to parse a valid coordinate tuple'.format(args))
+        yield v
+
+
+def get_xyz(*args):
+    """
+    Returns a floating point coordinate XYZ tuple for a given coordinate.
+    Valid input includes EsriJSON, ArcPy Point or PointGeometry instances or a minimum of 2 floating point values.
+    For Point geometries, M and ID values are ignored.
+    If no Z has been set, the output tuple Z value will be set to ``None``.
+
+    :param args:    A tuple of floating point values, an EsriJSON dictionary, an ArcPy Point or PointGeometry instance.
+    :rtype:         tuple
+    """
+    p_args = args
+    if len(args) == 1:
+        a = _iter.first(args)
+        if isinstance(a, _arcpy.PointGeometry):
+            # Get first point from PointGeometry...
+            a = a.firstPoint
+        if isinstance(a, _arcpy.Point):
+            # Get X, Y and Z properties from Point
+            p_args = a.X, a.Y, a.Z
+        elif isinstance(a, dict):
+            # Assume argument is JSON(-like) input: read x, y and z keys
+            p_args = (v for k, v in sorted(a.items()) if k.lower() in ('x', 'y', 'z'))
+        else:
+            raise ValueError('Input is not a Point, PointGeometry, JSON dictionary or iterable of float')
+
+    return tuple(_parse_xyz(*p_args))
