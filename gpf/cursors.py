@@ -45,12 +45,12 @@ def _map_fields(fields):
 
 def _default_tuple(length):
     """ Returns a tuple filled with None values. """
-    return tuple(None for _ in range(length))
+    return tuple(None for _ in xrange(length))
 
 
 def _default_list(length):
     """ Returns a list filled with None values. """
-    return list(None for _ in range(length))
+    return list(None for _ in xrange(length))
 
 
 # noinspection PyPep8Naming
