@@ -18,11 +18,12 @@
 The metadata module contains functions and classes that help describing data.
 """
 
+from warnings import warn as _warn
+
 import gpf.common.textutils as _tu
 import gpf.cursors as _cursors
+import gpf.tools.fieldutils as _fu
 from gpf import arcpy as _arcpy
-
-from warnings import warn as _warn
 
 
 class DescribeWarning(RuntimeWarning):
@@ -40,11 +41,20 @@ class Describe(object):
     If a property does not exist, it will return ``None``. If this is not desired,
     consider using the :func:`get` function, which behaves similar to a :func:`dict.get`.
 
+    .. note::           Only a limited amount of properties has been exposed in this class.
+                        For a complete list of all possible properties, please have a look `here`_.
+                        For these unlisted properties, the same rule applies: if it doesn't exist, ``None`` is returned.
+
+    .. _here:   https://desktop.arcgis.com/en/arcmap/latest/analyze/arcpy-functions/describe-object-properties.htm
+
     :param element:     The data element to describe.
     """
 
+    # Exposed attributes
     _ATTR_FIELDS = 'fields'
     _ATTR_DATATYPE = 'dataType'
+    _ATTR_SHAPETYPE = 'shapeType'
+    _ATTR_DATASETTYPE = 'datasetType'
     _ATTR_OIDFIELD = 'OIDFieldName'
     _ATTR_SHPFIELD = 'shapeFieldName'
     _ATTR_LENFIELD = 'lengthFieldName'
@@ -52,6 +62,21 @@ class Describe(object):
     _ATTR_RASTERFIELD = 'rasterFieldName'
     _ATTR_SUBTYPEFIELD = 'subtypeFieldName'
     _ATTR_GLOBALIDFIELD = 'globalIDFieldName'
+
+    # Geometry types
+    _SHP_POINT = 'Point'
+    _SHP_MULTIPOINT = 'Multipoint'
+    _SHP_POLYLINE = 'Polyline'
+    _SHP_POLYGON = 'Polygon'
+    _SHP_MULTIPATCH = 'MultiPatch'
+
+    # This dataset type list is not exhaustive
+    _DS_FEATURECLASS = 'FeatureClass'
+    _DS_FEATUREDATASET = 'FeatureDataset'
+    _DS_GEOMETRICNW = 'GeometricNetwork'
+    _DS_MOSAICRASTER = 'MosaicDataset'
+    _DS_RASTER = 'RasterDataset'
+    _DS_TABLE = 'Table'
 
     __slots__ = '_obj'
 
@@ -77,6 +102,7 @@ class Describe(object):
         return False
 
     def _get(self, name):
+        """ Behaves like the :func:`get` function below, but shows warning if an attribute is missing. """
         if not hasattr(self._obj, name) and name not in ('__dict__', '__members__', '__methods__'):
             _warn('Describe object of type {} does not have a {} attribute'.
                   format(_tu.to_repr(self.dataType), _tu.to_repr(name)), Warning)
@@ -145,14 +171,7 @@ class Describe(object):
                   format(_tu.to_repr(self.dataType), _tu.to_repr(Describe._ATTR_FIELDS)), Warning)
             return []
 
-        fields = [field.name if names_only else field for field in self._obj.fields]
-        if uppercase:
-            if names_only:
-                return [field.upper() for field in fields]
-            else:
-                for f in fields:
-                    f.name = f.name.upper()
-        return fields
+        return _fu.list_fields(self._obj.fields, names_only, uppercase)
 
     def get_editable_fields(self, names_only=True, uppercase=False):
         """
@@ -172,7 +191,7 @@ class Describe(object):
                   format(_tu.to_repr(self.dataType), _tu.to_repr(Describe._ATTR_FIELDS)), Warning)
             return []
 
-        return [field.name if names_only else field for field in self.fields(uppercase=uppercase) if field.editable]
+        return [field.name if names_only else field for field in self.get_fields(uppercase=uppercase) if field.editable]
 
     @property
     def dataType(self):
@@ -188,6 +207,126 @@ class Describe(object):
             return None
 
         return self._obj.dataType
+
+    @property
+    def shapeType(self):
+        """
+        Returns the geometry type for this ``Describe`` object.
+        This will return 'Polygon', 'Polyline', 'Point', 'Multipoint' or 'MultiPatch'
+        if the described object is a feature class, or ``None`` if it's not.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_SHAPETYPE)
+
+    @property
+    def is_pointclass(self):
+        """
+        Returns ``True`` if the described object is a Point feature class.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_POINT
+
+    @property
+    def is_multipointclass(self):
+        """
+        Returns ``True`` if the described object is a Multipoint feature class.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_MULTIPOINT
+
+    @property
+    def is_polylineclass(self):
+        """
+        Returns ``True`` if the described object is a Polyline feature class.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_POLYLINE
+
+    @property
+    def is_polygonclass(self):
+        """
+        Returns ``True`` if the described object is a Polygon feature class.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_POLYGON
+
+    @property
+    def is_multipatchclass(self):
+        """
+        Returns ``True`` if the described object is a MultiPatch feature class.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_MULTIPATCH
+
+    @property
+    def datasetType(self):
+        """
+        Returns the name of the dataset type (e.g. Table, FeatureClass etc.).
+        If the described object is not a dataset, ``None`` is returned.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_DATASETTYPE)
+
+    @property
+    def is_featureclass(self):
+        """
+        Returns ``True`` if the described object is a feature class.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_FEATURECLASS
+
+    @property
+    def is_featuredataset(self):
+        """
+        Returns ``True`` if the described object is a feature dataset.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_FEATUREDATASET
+
+    @property
+    def is_geometricnetwork(self):
+        """
+        Returns ``True`` if the described object is a geometric network.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_GEOMETRICNW
+
+    @property
+    def is_mosaicdataset(self):
+        """
+        Returns ``True`` if the described object is a mosaic dataset (raster).
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_MOSAICRASTER
+
+    @property
+    def is_rasterdataset(self):
+        """
+        Returns ``True`` if the described object is a raster dataset.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_RASTER
+
+    @property
+    def is_table(self):
+        """
+        Returns ``True`` if the described object is a table.
+
+        :rtype: bool
+        """
+        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_TABLE
 
     @property
     def globalIDFieldName(self):
