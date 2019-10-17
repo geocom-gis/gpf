@@ -31,7 +31,8 @@ _DUPEKEYS_ARG = 'duplicate_keys'
 _MUTABLE_ARG = 'mutable_values'
 _SINGLEVAL_ARG = 'single_value'
 
-_FLD_SHAPEXY = 'SHAPE@XY'
+_FLD_SHAPE = 'SHAPE@'
+_FLD_SHAPEXY = '{}XY'.format(_FLD_SHAPE)
 
 #: The default (Esri-recommended) resolution that is used by the :func:`get_nodekey` function (i.e. for lookups).
 #: If coordinate values fall within this distance, they are considered equal.
@@ -320,8 +321,8 @@ class RowLookup(_BaseLookup):
 
 class NodeSet(set):
     """
-    Builds a set of unique node keys for coordinates in a feature class. For the hashes, the :func:`get_nodekey`
-    function will be used.
+    Builds a set of unique node keys for coordinates in a feature class.
+    The :func:`get_nodekey` function will be used to generate the coordinate hash.
 
     For feature classes with a geometry type other than Point, a NodeSet will be built from the first and last
     points in a geometry. If this is not desired (i.e. all coordinates should be included), the user should set
@@ -335,6 +336,7 @@ class NodeSet(set):
     :type fc_path:          str, unicode
     :type where_clause:     str, unicode, ~gpf.tools.queries.Where
     :type all_vertices:     bool
+    :raises ValueError:     If the input dataset is not a feature class or if the geometry type is MultiPatch.
     """
 
     def __init__(self, fc_path, where_clause=None, all_vertices=False):
@@ -347,41 +349,47 @@ class NodeSet(set):
         desc = _meta.Describe(fc_path)
         if not desc.shapeFieldName:
             raise ValueError('Input dataset {} is not a feature class'.format(_tu.to_repr(fc_path)))
-        if desc.shapeType == 'MultiPatch':
+        shape_type = desc.shapeType.lower()
+        if shape_type == 'multipatch':
             raise ValueError('Geometry type of {} is not supported'.format(_tu.to_repr(fc_path)))
-        return desc.shapeType
+        return shape_type
+
+    def _fix_params(self, fc_path, all_vertices):
+        """
+        Returns a tuple of (field, all_vertices) based on the input parameters.
+        The shape type of the feature class sets the field name and may override *oll_vertices*.
+        """
+
+        # The fastest way to fetch results is by reading coordinate tuples
+        field = _FLD_SHAPEXY
+        shape_type = self._get_shapetype(fc_path)
+        if shape_type != 'point':
+            # However, for geometry types other than Point, we need to read the Shape object
+            field = _FLD_SHAPE
+        if shape_type == 'multipoint':
+            # Multipoints will be treated differently (always read all vertices)
+            all_vertices = True
+
+        return field, all_vertices
 
     def _populate(self, fc_path, where_clause, all_vertices):
         """ Populates the NodeSet with node keys. """
 
-        # The fastest way to fetch results is by reading coordinate tuples
-        field = _FLD_SHAPEXY
-        is_multipoint = False
-        shape_type = self._get_shapetype(fc_path)
-        if shape_type != 'Point':
-            # However, for geometry types other than Point, we need to read the Shape object
-            field = 'SHAPE@'
-        if shape_type == 'Multipoint':
-            # Multipoints will be treated differently (always read all vertices)
-            is_multipoint = True
+        field, all_vertices = self._fix_params(fc_path, all_vertices)
 
         # Iterate over all geometries and add keys
         with _cursors.SearchCursor(fc_path, field, where_clause) as rows:
             for shape, in rows:
                 # If the geometry is a simple coordinate tuple, immediately add it
-                if isinstance(shape, tuple):
+                if field == _FLD_SHAPEXY:
                     self.add(get_nodekey(*shape))
                     continue
 
-                if all_vertices or is_multipoint:
-                    for part in shape:
-                        if is_multipoint:
-                            self.add(get_nodekey(part))
-                            continue
-                        for point in part:
-                            self.add(get_nodekey(point))
+                if all_vertices:
+                    for coord in _geo.get_vertices(shape):
+                        self.add(get_nodekey(*coord))
                     continue
 
-                # When *all_vertices* is False or the geometry is not a Multipoint
+                # When *all_vertices* is False (or the geometry is not a Multipoint), only get the start/end nodes
                 self.add(get_nodekey(shape.firstPoint))
                 self.add(get_nodekey(shape.lastPoint))
