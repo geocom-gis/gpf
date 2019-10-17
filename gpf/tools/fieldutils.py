@@ -16,9 +16,12 @@
 
 """
 The *fields* module contains helper functions related to working with Esri Fields (GIS attributes).
+
+.. seealso::    The :class:`~gpf.tools.metadata.Describe` class has a :func:`~gpf.tools.metadata.Describe.get_fields`
+                and a :func:`~gpf.tools.metadata.Describe.get_editable_fields` function, which might also be helpful.
 """
 
-import gpf.tools.metadata as _meta
+import gpf.common.validate as _vld
 from gpf import arcpy as _arcpy
 
 OBJECTID = 'OID@'
@@ -26,10 +29,61 @@ SHAPE = 'SHAPE@'
 SHAPE_AREA = 'SHAPE@AREA'
 SHAPE_LENGTH = 'SHAPE@LENGTH'
 
+#: Lookup dictionary to map ``Field`` types to the field types used in ArcPy's :func:`AddField` function.
+FIELDTYPE_MAPPING = {
+    'Text': 'TEXT',
+    'Single': 'FLOAT',
+    'Double': 'DOUBLE',
+    'SmallInteger': 'SHORT',
+    'Integer': 'LONG',
+    'Date': 'DATE',
+    'Blob': 'BLOB',
+    'Raster': 'RASTER',
+    'Guid': 'GUID'
+}
 
-def get_missing(table, expected_fields):
+
+def clone_field(field):
+    """ Returns a deep copy (clone) of a Field object. """
+    new_field = _arcpy.Field()
+    for attr in (f for f in dir(field) if not f.startswith('_')):
+        value = getattr(field, attr)
+        setattr(new_field, attr, value)
+    return new_field
+
+
+def list_fields(obj, names_only=True, uppercase=False):
     """
-    Returns a list of missing fields for a specified table or feature class.
+    Returns a list of (modified) Field objects or field names for a given list of Field objects or a dataset.
+
+    :param obj:             Dataset path or list of original ``Field`` instances.
+    :param names_only:      When ``True`` (default), a list of field names instead of ``Field`` instances is returned.
+    :param uppercase:       When ``True`` (default=``False``), the returned field names will be uppercase.
+                            This also applies when *names_only* is set to return ``Field`` instances.
+    :type obj:              list, str, unicode
+    :type names_only:       bool
+    :type uppercase:        bool
+    :return:                List of field names or ``Field`` instances.
+    :rtype:                 list
+    """
+    # Get field list if input is not a list (or tuple)
+    fields = obj
+    if not _vld.is_iterable(obj):
+        fields = _arcpy.ListFields(obj) or []
+
+    # Set field names to uppercase (on cloned fields, in case an existing field list was input)
+    if uppercase:
+        for i, field in enumerate(fields):
+            field_clone = clone_field(field)
+            field_clone.name = field.name.upper()
+            fields[i] = field_clone
+
+    return [field.name if names_only else field for field in fields]
+
+
+def missing_fields(table, expected_fields):
+    """
+    Returns a list of missing field **names** for a specified table or feature class.
     The expected field names are case-insensitive.
     If an empty list is returned, all fields are accounted for.
 
@@ -44,7 +98,7 @@ def get_missing(table, expected_fields):
     :rtype:                 list
     """
     try:
-        table_fields = [field.name.upper() for field in _arcpy.ListFields(table) or []]
+        table_fields = list_fields(table, True, True)
     except (RuntimeError, TypeError, ValueError):
         return expected_fields
 
@@ -54,14 +108,64 @@ def get_missing(table, expected_fields):
         field = f.upper()
         if '@' in field:
             if desc is None:
-                desc = _meta.Describe(table)
-            if (field == OBJECTID and not desc.OIDFieldName) or \
-               (field.startswith(SHAPE) and not desc.shapeFieldName) or \
-               (field == SHAPE_LENGTH and not desc.lengthFieldName) or \
-               (field == SHAPE_AREA and not desc.areaFieldName):
+                # Only describe the input table (= time-consuming) if @ has been used in a field name and only once
+                try:
+                    # Use arcpy's built-in Describe function, to avoid cyclic imports (in metadata module)
+                    desc = _arcpy.Describe(table)
+                except (RuntimeError, OSError, AttributeError, ValueError, TypeError):
+                    desc = object()
+            if (field == OBJECTID and not getattr(desc, 'OIDFieldName', None)) or \
+               (field.startswith(SHAPE) and not getattr(desc, 'shapeFieldName', None)) or \
+               (field == SHAPE_LENGTH and not getattr(desc, 'lengthFieldName', None)) or \
+               (field == SHAPE_AREA and not getattr(desc, 'areaFieldName', None)):
                 missing.append(f)
             continue
         if field not in table_fields:
             missing.append(f)
 
     return missing
+
+
+def add_field(dataset, name, template_field=None, alias=None):
+    """
+    Adds a new field to a *dataset*, based off a *template_field* ``Field`` instance.
+    All properties from the new field will be taken from this template field, except for the *name* (and *alias*).
+
+    :param dataset:         The full path to the dataset (table, feature class) to which the field should be added.
+    :param name:            The name of the field to add.
+    :param template_field:  An optional template ``Field`` on which the new field should be based.
+                            If no template field is specified, a default field of type TEXT is created.
+    :param alias:           An optional alias name for the field. Defaults to ``None``.
+    :type dataset:          str, unicode
+    :type name:             str, unicode
+    :type template_field:   Field
+    :type alias:            str, unicode
+    :rtype:                 Result
+    :raises ValueError:     If a template field was provided, but it's not a ``Field`` instance,
+                            or if the template field is of an unsupported type (i.e. GlobalID, OID or Geometry).
+    """
+
+    field_type = 'TEXT'
+    field_alias = alias
+    field_precision = None
+    field_scale = None
+    field_length = None
+    field_is_nullable = None
+    field_is_required = None
+    field_domain = None
+    if template_field:
+        if not isinstance(template_field, _arcpy.Field):
+            raise ValueError('Template field should be an ArcPy Field instance')
+        field_type = FIELDTYPE_MAPPING.get(template_field.type)
+        if not field_type:
+            raise ValueError('Fields of type {} cannot be added'.format(template_field.type))
+        field_precision = template_field.precision
+        field_scale = template_field.scale
+        field_length = template_field.length
+        field_is_nullable = template_field.isNullable
+        field_is_required = template_field.required
+        field_domain = template_field.domain
+
+    return _arcpy.AddField_management(dataset, name, field_type,
+                                      field_precision, field_scale, field_length, field_alias,
+                                      field_is_nullable, field_is_required, field_domain)
