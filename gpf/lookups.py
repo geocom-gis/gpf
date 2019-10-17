@@ -24,8 +24,8 @@ from abc import abstractmethod
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 import gpf.cursors as _cursors
-import gpf.tools.metadata as _meta
 import gpf.tools.geometry as _geo
+import gpf.tools.metadata as _meta
 
 _DUPEKEYS_ARG = 'duplicate_keys'
 _MUTABLE_ARG = 'mutable_values'
@@ -344,15 +344,14 @@ class NodeSet(set):
         self._populate(fc_path, where_clause, all_vertices)
 
     @staticmethod
-    def _get_shapetype(fc_path):
-        # Checks if the feature class has the correct geometry type and returns it
+    def _get_desc(fc_path):
+        # Checks if the input dataset is valid and returns its Describe object
         desc = _meta.Describe(fc_path)
-        if not desc.shapeFieldName:
+        if not desc.shapeType:
             raise ValueError('Input dataset {} is not a feature class'.format(_tu.to_repr(fc_path)))
-        shape_type = desc.shapeType.lower()
-        if shape_type == 'multipatch':
+        if desc.is_multipatchclass:
             raise ValueError('Geometry type of {} is not supported'.format(_tu.to_repr(fc_path)))
-        return shape_type
+        return desc
 
     def _fix_params(self, fc_path, all_vertices):
         """
@@ -362,11 +361,11 @@ class NodeSet(set):
 
         # The fastest way to fetch results is by reading coordinate tuples
         field = _FLD_SHAPEXY
-        shape_type = self._get_shapetype(fc_path)
-        if shape_type != 'point':
+        desc = self._get_desc(fc_path)
+        if not desc.is_pointclass:
             # However, for geometry types other than Point, we need to read the Shape object
             field = _FLD_SHAPE
-        if shape_type == 'multipoint':
+        if desc.is_multipointclass:
             # Multipoints will be treated differently (always read all vertices)
             all_vertices = True
 
