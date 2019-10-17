@@ -167,6 +167,8 @@ def pass_if(expression, exc_type, exc_val=''):
     :param expression:  An expression or value to evaluate.
     :param exc_type:    The error to raise when *expression* evaluates to ``False``, e.g. ``AttributeError``.
     :param exc_val:     An optional message or exception value to include with the error (recommended).
+    :rtype:             bool
+    :return:            Returns ``True`` if evaluation was successful.
 
     :Examples:
 
@@ -183,6 +185,7 @@ def pass_if(expression, exc_type, exc_val=''):
     """
     if not expression:
         raise exc_type(exc_val)
+    return True
 
 
 def raise_if(expression, exc_type, exc_val=''):
@@ -193,6 +196,8 @@ def raise_if(expression, exc_type, exc_val=''):
     :param expression:  An expression or value to evaluate.
     :param exc_type:    The error to raise when *expression* evaluates to ``True``, e.g. ``AttributeError``.
     :param exc_val:     An optional message or exception value to include with the error (recommended).
+    :rtype:             bool
+    :return:            Returns ``True`` if evaluation was unsuccessful.
 
     :Examples:
 
@@ -206,3 +211,4 @@ def raise_if(expression, exc_type, exc_val=''):
     """
     if expression:
         raise exc_type(exc_val)
+    return True
