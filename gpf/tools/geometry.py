@@ -222,21 +222,20 @@ class ShapeBuilder(object):
         return self._output(_arcpy.Polygon, coords, spatial_reference, has_z, has_m)
 
 
-def _parse_xyz(*args):
+def _fix_coord(*args, **kwargs):
     """
-    Validates if the input arguments are numeric and returns a generator of 3 numbers.
-    The last value may be ``None`` (if Z value is omitted).
+    Returns a generator of *dim* numbers (default = 2), where *dim* is the number of dimensions.
+    For every value in *args* that is missing, a value of ``None`` will be yielded.
+
+    For example, if a coordinate tuple with 2 arguments was passed in, but the expected number of dimensions is 3,
+    the generator will return 3 values, of which the last one is ``None``.
     """
-    for i in xrange(3):
+    dim = kwargs.get('dim', 2)
+    for i in xrange(dim):
         try:
-            v = args[i]
+            yield args[i]
         except IndexError:
-            v = None
-        test = _vld.is_number(v)
-        if i == 2:
-            test = test or v is None
-        _vld.pass_if(test, ValueError, 'Failed to parse a valid coordinate tuple'.format(args))
-        yield v
+            yield None
 
 
 def get_xyz(*args):
@@ -250,18 +249,44 @@ def get_xyz(*args):
     :rtype:         tuple
     """
     p_args = args
+
     if len(args) == 1:
         a = _iter.first(args)
-        if isinstance(a, _arcpy.PointGeometry):
+
+        # Unfortunately, we can't really rely on isinstance() to check if it's a PointGeometry or Point.
+        # If it's a PointGeometry, it should have a pointCount attribute with a value of 1.
+        if getattr(a, 'pointCount', 0) == 1:
             # Get first point from PointGeometry...
             a = a.firstPoint
-        if isinstance(a, _arcpy.Point):
+
+        if hasattr(a, 'X') and hasattr(a, 'Y'):
             # Get X, Y and Z properties from Point
             p_args = a.X, a.Y, a.Z
         elif isinstance(a, dict):
             # Assume argument is JSON(-like) input: read x, y and z keys
-            p_args = (v for k, v in sorted(a.items()) if k.lower() in ('x', 'y', 'z'))
+            p_args = tuple(v for k, v in sorted(a.items()) if k.lower() in ('x', 'y', 'z'))
+            # Validate values
+            for a in p_args:
+                _vld.pass_if(_vld.is_number(a), ValueError, 'Failed to parse coordinate from JSON'.format(args))
         else:
             raise ValueError('Input is not a Point, PointGeometry, JSON dictionary or iterable of float')
 
-    return tuple(_parse_xyz(*p_args))
+    return tuple(_fix_coord(*p_args, dim=3))
+
+
+def get_vertices(geometry):
+    """
+    Returns a generator of coordinate tuples (x, y[, z] floats) for all vertices in an Esri Geometry.
+
+    :param geometry:    The Esri Geometry (e.g. Polygon, Polyline etc.) for which to extract all vertices.
+    :rtype:             generator
+    """
+
+    if hasattr(geometry, '__iter__'):
+        _vld.pass_if(isinstance(geometry, (_arcpy.Geometry, _arcpy.Array)),
+                     ValueError, 'get_vertices() requires an Esri Geometry or Array')
+        for g in geometry:
+            for v in get_vertices(g):
+                yield v
+    else:
+        yield tuple(v for v in get_xyz(geometry) if v)
