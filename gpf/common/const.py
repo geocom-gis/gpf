@@ -20,7 +20,7 @@ Module with global constants that are used throughout the *gpf* package.
 
 import locale as _locale
 
-#: The default encoding the system uses (derived from locale).
+#: The default encoding that the system uses (derived from locale).
 #: For most western Windows-based systems, this will be cp1252, for example.
 ENC_DEFAULT = _locale.getpreferredencoding()
 ENC_UTF8 = 'UTF-8'
