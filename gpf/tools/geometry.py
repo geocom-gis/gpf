@@ -15,7 +15,7 @@
 # limitations under the License.
 
 """
-The *geometry* module contains functions that help make_path Esri geometries.
+The *geometry* module contains functions that help working with Esri geometries.
 """
 
 import gpf.common.iterutils as _iter
@@ -31,37 +31,37 @@ class GeometryError(ValueError):
 
 class ShapeBuilder(object):
     """
-    Helper class to make_path Esri geometry objects from arcpy ``Point`` or ``Array`` objects or coordinate values.
+    Helper class to create Esri geometry objects from arcpy ``Point`` or ``Array`` objects or coordinate values.
 
-        Examples:
+    Examples:
 
-            >>> # instantiate a 2D PointGeometry
-            >>> ShapeBuilder(6.5, 2.8).as_point()
-            <PointGeometry object at 0x19fcbdf0[0x19fcbd80]>
+        >>> # instantiate a 2D PointGeometry
+        >>> ShapeBuilder(6.5, 2.8).as_point()
+        <PointGeometry object at 0x19fcbdf0[0x19fcbd80]>
 
-            >>> # instantiate a 3D PointGeometry
-            >>> ShapeBuilder(6.5, 2.8, 5.3).as_point(has_z=True)
-            <PointGeometry object at 0x6b96210[0x19fcbbe0]>
+        >>> # instantiate a 3D PointGeometry
+        >>> ShapeBuilder(6.5, 2.8, 5.3).as_point(has_z=True)
+        <PointGeometry object at 0x6b96210[0x19fcbbe0]>
 
-            >>> # make_path a 2D line (append technique)
-            >>> shp = ShapeBuilder()
-            >>> shp.append(1.0, 2.0)
-            >>> shp.append(1.5, 3.0)
-            >>> shp.as_polyline()
-            <Polyline object at 0x6a9bb70[0x6fe2540]>
+        >>> # make_path a 2D line (append technique)
+        >>> shp = ShapeBuilder()
+        >>> shp.append(1.0, 2.0)
+        >>> shp.append(1.5, 3.0)
+        >>> shp.as_polyline()
+        <Polyline object at 0x6a9bb70[0x6fe2540]>
 
-            >>> # make_path a 3D polygon from 2D coordinates
-            >>> shp = ShapeBuilder([(1.0, 2.0), (1.5, 3.0), (2.0, 2.0)])
-            >>> polygon = shp.as_polygon(has_z=True)
-            >>> # Z values are added and set to 0
-            >>> polygon.firstPoint
-            <Point (1.00012207031, 2.00012207031, 0.0, #)>
-            >>> # note that the "open" polygons will be closed automatically
-            >>> polygon.firstPoint == polygon.lastPoint
-            True
-            >>> # calling as_point() on a ShapeBuilder with multiple coordinates will return a centroid
-            >>> shp.as_point()
-            <Point (1.50012207031, 2.33345540365, #, #)>
+        >>> # make_path a 3D polygon from 2D coordinates
+        >>> shp = ShapeBuilder([(1.0, 2.0), (1.5, 3.0), (2.0, 2.0)])
+        >>> polygon = shp.as_polygon(has_z=True)
+        >>> # Z values are added and set to 0
+        >>> polygon.firstPoint
+        <Point (1.00012207031, 2.00012207031, 0.0, #)>
+        >>> # note that the "open" polygons will be closed automatically
+        >>> polygon.firstPoint == polygon.lastPoint
+        True
+        >>> # calling as_point() on a ShapeBuilder with multiple coordinates will return a centroid
+        >>> shp.as_point()
+        <Point (1.50012207031, 2.33345540365, #, #)>
     """
 
     __slots__ = '_arr', '_num_coords'
@@ -242,11 +242,12 @@ def get_xyz(*args):
     """
     Returns a floating point coordinate XYZ tuple for a given coordinate.
     Valid input includes EsriJSON, ArcPy Point or PointGeometry instances or a minimum of 2 floating point values.
-    For Point geometries, M and ID values are ignored.
-    If no Z has been set, the output tuple Z value will be set to ``None``.
+    If the geometry is not Z aware, the Z value in the output tuple will be set to ``None``.
 
     :param args:    A tuple of floating point values, an EsriJSON dictionary, an ArcPy Point or PointGeometry instance.
     :rtype:         tuple
+
+    .. note::       For Point geometries, M and ID values are ignored.
     """
     p_args = args
 
@@ -254,9 +255,9 @@ def get_xyz(*args):
         a = _iter.first(args)
 
         # Unfortunately, we can't really rely on isinstance() to check if it's a PointGeometry or Point.
-        # If it's a PointGeometry, it should have a pointCount attribute with a value of 1.
+        # However, if it's a PointGeometry, it must have a pointCount attribute with a value of 1.
         if getattr(a, 'pointCount', 0) == 1:
-            # Get first point from PointGeometry...
+            # Get first Point from PointGeometry...
             a = a.firstPoint
 
         if hasattr(a, 'X') and hasattr(a, 'Y'):
@@ -277,12 +278,13 @@ def get_xyz(*args):
 def get_vertices(geometry):
     """
     Returns a generator of coordinate tuples (x, y[, z] floats) for all vertices in an Esri Geometry.
+    If the geometry is not Z aware, the coordinate tuples will only hold 2 values (X and Y).
 
     :param geometry:    The Esri Geometry (e.g. Polygon, Polyline etc.) for which to extract all vertices.
     :rtype:             generator
     """
 
-    if hasattr(geometry, '__iter__'):
+    if _vld.is_iterable(geometry):
         _vld.pass_if(isinstance(geometry, (_arcpy.Geometry, _arcpy.Array)),
                      ValueError, 'get_vertices() requires an Esri Geometry or Array')
         for g in geometry:
