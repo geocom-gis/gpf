@@ -21,6 +21,7 @@ This module can be used to build lookup data structures from Esri tables and fea
 from abc import ABCMeta
 from abc import abstractmethod
 
+import gpf.common.const as _const
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 import gpf.cursors as _cursors
@@ -30,9 +31,6 @@ import gpf.tools.metadata as _meta
 _DUPEKEYS_ARG = 'duplicate_keys'
 _MUTABLE_ARG = 'mutable_values'
 _SINGLEVAL_ARG = 'single_value'
-
-_FLD_SHAPE = 'SHAPE@'
-_FLD_SHAPEXY = '{}XY'.format(_FLD_SHAPE)
 
 #: The default (Esri-recommended) resolution that is used by the :func:`get_nodekey` function (i.e. for lookups).
 #: If coordinate values fall within this distance, they are considered equal.
@@ -102,7 +100,7 @@ class _BaseLookup(dict):
         super(dict, self).__init__()
 
         fields = tuple([key_field] + list(value_fields if _vld.is_iterable(value_fields) else (value_fields, )))
-        self._iscoordkey = key_field.upper().startswith(_FLD_SHAPEXY)
+        self._iscoordkey = key_field.upper().startswith(_const.FIELD_X)
         self._populate(table_path, fields, where_clause, **kwargs)
 
     @staticmethod
@@ -125,7 +123,7 @@ class _BaseLookup(dict):
         :raises ValueError: When a field does not exist in the source table.
         """
         for field in user_fields:
-            _vld.pass_if('@' in field or field.upper() in table_fields,
+            _vld.pass_if(_const.CHAR_AT in field or field.upper() in table_fields,
                          ValueError, 'Field {} does not exist'.format(field))
 
     @staticmethod
@@ -198,13 +196,16 @@ class ValueLookup(_BaseLookup):
             for key, value in _cursors.SearchCursor(table_path, fields, where_clause):
                 if key is None:
                     continue
+
                 if self._iscoordkey:
                     key = get_nodekey(*key)
+
                 if dupe_keys:
                     v = self.setdefault(key, [])
                     v.append(value)
                 else:
                     self[key] = value
+
         except Exception as e:
             raise RuntimeError('Failed to create {} for {}: {}'.format(ValueLookup.__name__,
                                                                        _tu.to_repr(table_path), e))
@@ -257,7 +258,9 @@ class RowLookup(_BaseLookup):
                 RowLookup.__name__, ValueLookup.__name__))
         _vld.pass_if(all(_vld.has_value(v) for v in (table_path, key_field, value_fields[0])), ValueError,
                      '{} requires valid table_path, key_field and value_fields arguments')
+
         super(RowLookup, self).__init__(table_path, key_field, value_fields, where_clause, **kwargs)
+
         self._fieldmap = {name.lower(): i for i, name in enumerate(value_fields)}
 
     def _populate(self, table_path, fields, where_clause=None, **kwargs):
@@ -270,13 +273,16 @@ class RowLookup(_BaseLookup):
                 key, values = row[0], cast_type(row[1:])
                 if key is None:
                     continue
+
                 if self._iscoordkey:
                     key = get_nodekey(*key)
+
                 if dupe_keys:
                     v = self.setdefault(key, [])
                     v.append(values)
                 else:
                     self[key] = values
+
         except Exception as e:
             raise RuntimeError('Failed to create {} for {}: {}'.format(RowLookup.__name__,
                                                                        _tu.to_repr(table_path), str(e)))
@@ -360,11 +366,11 @@ class NodeSet(set):
         """
 
         # The fastest way to fetch results is by reading coordinate tuples
-        field = _FLD_SHAPEXY
         desc = self._get_desc(fc_path)
+        field = _const.FIELD_XYZ if desc.hasZ else _const.FIELD_XY
         if not desc.is_pointclass:
             # However, for geometry types other than Point, we need to read the Shape object
-            field = _FLD_SHAPE
+            field = _const.FIELD_SHAPE
         if desc.is_multipointclass:
             # Multipoints will be treated differently (always read all vertices)
             all_vertices = True
@@ -380,7 +386,7 @@ class NodeSet(set):
         with _cursors.SearchCursor(fc_path, field, where_clause) as rows:
             for shape, in rows:
                 # If the geometry is a simple coordinate tuple, immediately add it
-                if field == _FLD_SHAPEXY:
+                if field.startswith(_const.FIELD_XY):
                     self.add(get_nodekey(*shape))
                     continue
 
