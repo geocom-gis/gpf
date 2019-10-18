@@ -15,11 +15,12 @@
 # limitations under the License.
 
 """
-The metadata module contains functions and classes that help describing data.
+The metadata module contains functions and classes that help describe data.
 """
 
 from warnings import warn as _warn
 
+import gpf.common.const as _const
 import gpf.common.textutils as _tu
 import gpf.cursors as _cursors
 import gpf.tools.fieldutils as _fu
@@ -27,56 +28,43 @@ from gpf import arcpy as _arcpy
 
 
 class DescribeWarning(RuntimeWarning):
-    """ The warning type that is shown when ArcPy's :func:`Describe` failed. """
+    """ The warning type that is shown when ArcPy's :func:`~arcpy.Describe` failed. """
     pass
 
 
 # noinspection PyPep8Naming
 class Describe(object):
     """
-    Wrapper class for the ArcPy ``Describe`` object.
-    If ArcPy's :func:`Describe` failed, a warning will be shown but no errors will be (re)raised.
+    Wrapper class for the ArcPy ``Describe`` object that exposes the most commonly used properties.
+
+    If ArcPy's :func:`~arcpy.Describe` failed, a warning will be shown but no errors will be (re)raised.
     Any ``Describe`` property that is retrieved, will return ``None`` in this case.
 
-    If a property does not exist, it will return ``None``. If this is not desired,
-    consider using the :func:`get` function, which behaves similar to a :func:`dict.get`.
+    If a property does not exist, it will also return ``None``. If this is not desired,
+    consider using the :func:`get` function, which behaves similar to a :func:`dict.get`
+    and can return a user-defined default value if the property was not found.
 
-    .. note::           Only a limited amount of properties has been exposed in this class.
-                        For a complete list of all possible properties, please have a look `here`_.
-                        For these unlisted properties, the same rule applies: if it doesn't exist, ``None`` is returned.
+    .. note::   Only a limited amount of properties has been exposed in this class.
+                For a complete list of all possible properties, please have a look `here`_.
+                For these unlisted properties, the same rule applies: if it doesn't exist,
+                ``None`` is returned. If another return value is required, use :func:`get`.
 
     .. _here:   https://desktop.arcgis.com/en/arcmap/latest/analyze/arcpy-functions/describe-object-properties.htm
 
     :param element:     The data element to describe.
     """
 
-    # Exposed attributes
+    # Exposed properties
     _ATTR_FIELDS = 'fields'
+    _ATTR_INDEXES = 'indexes'
     _ATTR_DATATYPE = 'dataType'
     _ATTR_SHAPETYPE = 'shapeType'
     _ATTR_DATASETTYPE = 'datasetType'
-    _ATTR_OIDFIELD = 'OIDFieldName'
-    _ATTR_SHPFIELD = 'shapeFieldName'
-    _ATTR_LENFIELD = 'lengthFieldName'
-    _ATTR_AREAFIELD = 'areaFieldName'
-    _ATTR_RASTERFIELD = 'rasterFieldName'
-    _ATTR_SUBTYPEFIELD = 'subtypeFieldName'
-    _ATTR_GLOBALIDFIELD = 'globalIDFieldName'
-
-    # Geometry types
-    _SHP_POINT = 'Point'
-    _SHP_MULTIPOINT = 'Multipoint'
-    _SHP_POLYLINE = 'Polyline'
-    _SHP_POLYGON = 'Polygon'
-    _SHP_MULTIPATCH = 'MultiPatch'
-
-    # This dataset type list is not exhaustive
-    _DS_FEATURECLASS = 'FeatureClass'
-    _DS_FEATUREDATASET = 'FeatureDataset'
-    _DS_GEOMETRICNW = 'GeometricNetwork'
-    _DS_MOSAICRASTER = 'MosaicDataset'
-    _DS_RASTER = 'RasterDataset'
-    _DS_TABLE = 'Table'
+    _ATTR_ZAWARE = 'hasZ'
+    _ATTR_MAWARE = 'hasM'
+    _ATTR_EXTENT = 'extent'
+    _ATTR_SPATREF = 'spatialReference'
+    _ATTR_VERSIONED = 'isVersioned'
 
     __slots__ = '_obj'
 
@@ -103,7 +91,7 @@ class Describe(object):
 
     def _get(self, name):
         """ Behaves like the :func:`get` function below, but shows warning if an attribute is missing. """
-        if not hasattr(self._obj, name) and name not in ('__dict__', '__members__', '__methods__'):
+        if not hasattr(self._obj, name) and not name.startswith(_const.TEXT_DUNDER):
             _warn('Describe object of type {} does not have a {} attribute'.
                   format(_tu.to_repr(self.dataType), _tu.to_repr(name)), Warning)
             return None
@@ -122,9 +110,9 @@ class Describe(object):
 
     def num_rows(self, where_clause=None):
         """
-        Returns the number of rows in the table or feature class.
+        Returns the number of rows for a table or feature class.
 
-        If the current Describe object does not support this action or does not have any rows, 0 will be returned.
+        If the current ``Describe`` object does not support this action or does not have any rows, 0 will be returned.
 
         :param where_clause:    An optional where clause to base the row count on.
         :type where_clause:     str, unicode, ~gpf.tools.queries.Where
@@ -154,45 +142,6 @@ class Describe(object):
 
         return num_rows
 
-    def get_fields(self, names_only=True, uppercase=False):
-        """
-        Returns a list of all fields in the described object (if any).
-
-        :param names_only:  When ``True`` (default), a list of field names instead of ``Field`` instances is returned.
-        :param uppercase:   When ``True`` (default=``False``), the returned field names will be uppercase.
-                            This also applies when *names_only* is set to return ``Field`` instances.
-        :type names_only:   bool
-        :type uppercase:    bool
-        :return:            List of field names or ``Field`` instances.
-        :rtype:             list
-        """
-        if Describe._ATTR_FIELDS not in self:
-            _warn('Describe object of type {} does not have a {} attribute'.
-                  format(_tu.to_repr(self.dataType), _tu.to_repr(Describe._ATTR_FIELDS)), Warning)
-            return []
-
-        return _fu.list_fields(self._obj.fields, names_only, uppercase)
-
-    def get_editable_fields(self, names_only=True, uppercase=False):
-        """
-        For data elements that have a *fields* property (e.g. Feature classes, Tables and workspaces),
-        this will return a list of all editable (writable) fields.
-
-        :param names_only:  When ``True`` (default), a list of field names instead of ``Field`` instances is returned.
-        :param uppercase:   When ``True`` (default=``False``), the returned field names will be uppercase.
-                            This also applies when *names_only* is set to return ``Field`` instances.
-        :type names_only:   bool
-        :type uppercase:    bool
-        :return:            List of field names or ``Field`` instances.
-        :rtype:             list
-        """
-        if Describe._ATTR_FIELDS not in self:
-            _warn('Describe object of type {} does not have a {} attribute'.
-                  format(_tu.to_repr(self.dataType), _tu.to_repr(Describe._ATTR_FIELDS)), Warning)
-            return []
-
-        return [field.name if names_only else field for field in self.get_fields(uppercase=uppercase) if field.editable]
-
     @property
     def dataType(self):
         """
@@ -200,13 +149,23 @@ class Describe(object):
         All ``Describe`` objects should have this property.
         If it returns ``None``, the object has not been successfully retrieved.
 
-        :rtype:     unicode
+        :rtype: unicode
         """
         if not self:
             _warn('{} object is empty'.format(_tu.to_repr(Describe.__name__)), Warning)
             return None
 
         return self._obj.dataType
+
+    @property
+    def datasetType(self):
+        """
+        Returns the name of the dataset type (e.g. Table, FeatureClass etc.).
+        If the described object is not a dataset, ``None`` is returned.
+
+        :rtype: unicode
+        """
+        return self._get(Describe._ATTR_DATASETTYPE)
 
     @property
     def shapeType(self):
@@ -220,13 +179,92 @@ class Describe(object):
         return self._get(Describe._ATTR_SHAPETYPE)
 
     @property
+    def fields(self):
+        """
+        Returns a list of all ``Field`` objects (attributes) for this ``Describe`` object.
+        If the described object is not a dataset, this will return an empty list.
+
+        :rtype: list
+        """
+        return self._get(Describe._ATTR_FIELDS) or []
+
+    @property
+    def indexes(self):
+        """
+        Returns a list of all ``Index`` objects (attribute indexes) for this ``Describe`` object.
+        If the described object is not a dataset, this will return an empty list.
+
+        :rtype: list
+        """
+        return self._get(Describe._ATTR_INDEXES) or []
+
+    def get_fields(self, names_only=True, uppercase=False):
+        """
+        Returns a list of all fields in the described object (if any).
+
+        :param names_only:  When ``True`` (default), a list of field *names* instead of ``Field`` instances is returned.
+        :param uppercase:   When ``True`` (default=``False``), the returned field names will be uppercase.
+                            This also applies when *names_only* is set to return ``Field`` instances.
+        :type names_only:   bool
+        :type uppercase:    bool
+        :return:            List of field names or ``Field`` instances.
+        :rtype:             list
+        """
+        return _fu.list_fields(self.fields, names_only, uppercase)
+
+    def get_editable_fields(self, names_only=True, uppercase=False):
+        """
+        For data elements that have a *fields* property (e.g. Feature classes, Tables and workspaces),
+        this will return a list of all editable (writable) fields.
+
+        :param names_only:  When ``True`` (default), a list of field *names* instead of ``Field`` instances is returned.
+        :param uppercase:   When ``True`` (default=``False``), the returned field names will be uppercase.
+                            This also applies when *names_only* is set to return ``Field`` instances.
+        :type names_only:   bool
+        :type uppercase:    bool
+        :return:            List of field names or ``Field`` instances.
+        :rtype:             list
+        """
+        return [field.name if names_only else field for field in self.get_fields(uppercase=uppercase) if field.editable]
+
+    @property
+    def extent(self):
+        """
+        Returns an ``Extent`` object for this ``Describe`` element.
+        If the described object is not a feature class, this will return an empty ``Extent``.
+
+        :rtype: ~arcpy.Extent
+        """
+        return self._get(Describe._ATTR_EXTENT) or _arcpy.Extent()
+
+    @property
+    def spatialReference(self):
+        """
+        Returns a ``SpatialReference`` object for this ``Describe`` element.
+        If the described object is not a feature class, this will return an empty ``SpatialReference``.
+
+        :rtype: ~arcpy.SpatialReference
+        """
+        return self._get(Describe._ATTR_SPATREF) or _arcpy.SpatialReference()
+
+    @property
+    def isVersioned(self):
+        """
+        Returns ``True`` if the ``Describe`` element refers to a versioned dataset.
+        If the described object is not a dataset or not versioned, this will return ``False``.
+
+        :rtype: bool
+        """
+        return self._get(Describe._ATTR_VERSIONED) or False
+
+    @property
     def is_pointclass(self):
         """
         Returns ``True`` if the described object is a Point feature class.
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_POINT
+        return self.get(Describe._ATTR_SHAPETYPE) == _const.SHP_POINT
 
     @property
     def is_multipointclass(self):
@@ -235,7 +273,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_MULTIPOINT
+        return self.get(Describe._ATTR_SHAPETYPE) == _const.SHP_MULTIPOINT
 
     @property
     def is_polylineclass(self):
@@ -244,7 +282,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_POLYLINE
+        return self.get(Describe._ATTR_SHAPETYPE) == _const.SHP_POLYLINE
 
     @property
     def is_polygonclass(self):
@@ -253,7 +291,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_POLYGON
+        return self.get(Describe._ATTR_SHAPETYPE) == _const.SHP_POLYGON
 
     @property
     def is_multipatchclass(self):
@@ -262,17 +300,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_SHAPETYPE) == Describe._SHP_MULTIPATCH
-
-    @property
-    def datasetType(self):
-        """
-        Returns the name of the dataset type (e.g. Table, FeatureClass etc.).
-        If the described object is not a dataset, ``None`` is returned.
-
-        :rtype: unicode
-        """
-        return self._get(Describe._ATTR_DATASETTYPE)
+        return self.get(Describe._ATTR_SHAPETYPE) == _const.SHP_MULTIPATCH
 
     @property
     def is_featureclass(self):
@@ -281,7 +309,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_FEATURECLASS
+        return self.get(Describe._ATTR_DATASETTYPE) == _const.DESC_TYPE_FEATURECLASS
 
     @property
     def is_featuredataset(self):
@@ -290,7 +318,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_FEATUREDATASET
+        return self.get(Describe._ATTR_DATASETTYPE) == _const.DESC_TYPE_FEATUREDATASET
 
     @property
     def is_geometricnetwork(self):
@@ -299,7 +327,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_GEOMETRICNW
+        return self.get(Describe._ATTR_DATASETTYPE) == _const.DESC_TYPE_GEOMETRICNET
 
     @property
     def is_mosaicdataset(self):
@@ -308,7 +336,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_MOSAICRASTER
+        return self.get(Describe._ATTR_DATASETTYPE) == _const.DESC_TYPE_MOSAICRASTER
 
     @property
     def is_rasterdataset(self):
@@ -317,7 +345,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_RASTER
+        return self.get(Describe._ATTR_DATASETTYPE) == _const.DESC_TYPE_RASTER
 
     @property
     def is_table(self):
@@ -326,7 +354,27 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self.get(Describe._ATTR_DATASETTYPE) == Describe._DS_TABLE
+        return self.get(Describe._ATTR_DATASETTYPE) == _const.DESC_TYPE_TABLE
+
+    @property
+    def hasZ(self):
+        """
+        Returns ``True`` if the described object is Z aware (i.e. is 3D).
+        If the object is not a feature class or not Z aware, ``False`` is returned.
+
+        :rtype: bool
+        """
+        return self._get(Describe._ATTR_ZAWARE) or False
+
+    @property
+    def hasM(self):
+        """
+        Returns ``True`` if the described object is M aware (i.e. has measures).
+        If the object is not a feature class or not M aware, ``False`` is returned.
+
+        :rtype: bool
+        """
+        return self._get(Describe._ATTR_MAWARE) or False
 
     @property
     def globalIDFieldName(self):
@@ -336,7 +384,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_GLOBALIDFIELD)
+        return self._get(_const.DESC_FIELD_GLOBALID)
 
     @property
     def OIDFieldName(self):
@@ -346,7 +394,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_OIDFIELD)
+        return self._get(_const.DESC_FIELD_OID)
 
     @property
     def shapeFieldName(self):
@@ -356,7 +404,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_SHPFIELD)
+        return self._get(_const.DESC_FIELD_SHAPE)
 
     @property
     def lengthFieldName(self):
@@ -366,7 +414,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_LENFIELD)
+        return self._get(_const.DESC_FIELD_LENGTH)
 
     @property
     def areaFieldName(self):
@@ -376,7 +424,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_AREAFIELD)
+        return self._get(_const.DESC_FIELD_AREA)
 
     @property
     def rasterFieldName(self):
@@ -386,7 +434,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_RASTERFIELD)
+        return self._get(_const.DESC_FIELD_RASTER)
 
     @property
     def subtypeFieldName(self):
@@ -396,4 +444,4 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_SUBTYPEFIELD)
+        return self._get(_const.DESC_FIELD_SUBTYPE)
