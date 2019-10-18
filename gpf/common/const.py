@@ -98,6 +98,9 @@ FIELD_M = 'SHAPE@M'
 FIELD_XY = 'SHAPE@XY'
 FIELD_XYZ = 'SHAPE@XYZ'
 
+# Default GlobalID field name
+FIELD_GLOBALID = 'GLOBALID'
+
 # Common file extensions
 EXT_ESRI_SHP = '.shp'
 EXT_ESRI_SDE = '.sde'
