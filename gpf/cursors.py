@@ -81,7 +81,7 @@ class _Row(object):
         return self._data[item]
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, ', '.join(_tu.to_repr(v) for v in self._data))
+        return '{}({})'.format(self.__class__.__name__, _const.TEXT_COMMASPACE.join(_tu.to_repr(v) for v in self._data))
 
     def __getslice__(self, i, j):
         return self._data[i:j]
@@ -90,7 +90,7 @@ class _Row(object):
         self._data = _default_tuple(len(self._fieldmap)) if row is None else row
         return self
 
-    def getValue(self, field, default=_const.EMPTY_OBJ):
+    def getValue(self, field, default=_const.OBJ_EMPTY):
         """
         Returns the value that matches the given *field* name for the current row.
 
@@ -105,7 +105,7 @@ class _Row(object):
         try:
             return self[self._fieldmap[field.upper()]]
         except (KeyError, IndexError):
-            _vld.raise_if(default is _const.EMPTY_OBJ, ValueError,
+            _vld.raise_if(default is _const.OBJ_EMPTY, ValueError,
                           'getValue() field {!r} does not exist and no default value was provided'.format(field))
             return default
 
@@ -319,7 +319,7 @@ class SearchCursor(_arcpy.da.SearchCursor):
     :type sql_clause:           tuple, list
     """
 
-    def __init__(self, in_table, field_names='*', where_clause=None, **kwargs):
+    def __init__(self, in_table, field_names=_const.CHAR_ASTERISK, where_clause=None, **kwargs):
         _q.add_where(kwargs, where_clause, in_table)
         super(SearchCursor, self).__init__(in_table, field_names, **kwargs)
         self._row = _Row(_map_fields(field_names if _vld.is_iterable(field_names) else self.fields))

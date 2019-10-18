@@ -84,7 +84,7 @@ def collapse(iterable, base_type=None, levels=None):
         yield x
 
 
-def first(iterable, default=_const.EMPTY_OBJ):
+def first(iterable, default=_const.OBJ_EMPTY):
     """Return the first item of *iterable*, or *default* if *iterable* is
     empty.
 
@@ -105,6 +105,6 @@ def first(iterable, default=_const.EMPTY_OBJ):
     try:
         return next(iter(iterable))
     except StopIteration:
-        _vld.raise_if(default is _const.EMPTY_OBJ, ValueError,
+        _vld.raise_if(default is _const.OBJ_EMPTY, ValueError,
                       'first() was called on an empty iterable, and no default value was provided.')
         return default

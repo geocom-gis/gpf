@@ -53,7 +53,7 @@ def is_text(value, allow_empty=True):
     :rtype:             bool
     """
     if isinstance(value, _types.StringTypes):
-        return allow_empty or value != _const.EMPTY_STR
+        return allow_empty or value != _const.CHAR_EMPTY
     return False
 
 
@@ -155,7 +155,7 @@ def has_value(obj, strip=False):
     if not obj:
         return obj == 0
     if is_text(obj):
-        return (obj.strip() if strip else obj) != _const.EMPTY_STR
+        return (obj.strip() if strip else obj) != _const.CHAR_EMPTY
     return True
 
 

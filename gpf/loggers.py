@@ -30,6 +30,7 @@ from logging import handlers as _handlers
 from gpf import arcpy as _arcpy
 import gpf.common.iterutils as _iter
 import gpf.common.textutils as _tu
+import gpf.common.const as _const
 import gpf.common.validate as _vld
 
 _LOGLINE_LENGTH = 80
@@ -72,7 +73,7 @@ class _FileLogHandler(_handlers.RotatingFileHandler):
 
     __UFS = unicode(_LOG_FMT_LF)
 
-    def __init__(self, filename, time_tag=True, encoding=_tu.DEFAULT_ENCODING):
+    def __init__(self, filename, time_tag=True, encoding=_const.ENC_DEFAULT):
         self._id, name = self._get_id_name(filename, time_tag)
         self._make_dir(name)
         super(_FileLogHandler, self).__init__(name, encoding=encoding)
@@ -188,7 +189,7 @@ class _ArcLogHandler(_logging.StreamHandler):
                 stream.write(self.__FS % msg)
 
         except UnicodeError:
-            stream.write(self.__FS % msg.encode('UTF-8'))
+            stream.write(self.__FS % msg.encode(_const.ENC_UTF8))
         self.flush()
 
     @staticmethod
@@ -198,12 +199,12 @@ class _ArcLogHandler(_logging.StreamHandler):
                 try:
                     func(msg)
                 except UnicodeEncodeError:
-                    func(msg.encode(_tu.DEFAULT_ENCODING))
+                    func(msg.encode(_const.ENC_DEFAULT))
             else:
                 func(msg)
 
         except UnicodeError:
-            func(msg.encode(_tu.DEFAULT_ENCODING))
+            func(msg.encode(_const.ENC_DEFAULT))
 
     def emit(self, record):
         """
@@ -258,7 +259,7 @@ class _FileLogFormatter(_logging.Formatter):
         len_name = len(record.name)
         if len_name > self._name_max:
             # Truncate/abbreviate logger name with '...' if it's too long
-            record.name = record.name[:self._name_max - 3].ljust(self._name_max, _tu.DOT)
+            record.name = record.name[:self._name_max - 3].ljust(self._name_max, _const.CHAR_DOT)
         record.name = record.name.ljust(self._name_max)
 
         return super(_FileLogFormatter, self).format(record)
@@ -477,7 +478,7 @@ class Logger(object):
             print(message)
         self._num_err += 1
 
-    def section(self, message=_tu.EMPTY_STR, max_length=80, symbol=_tu.DASH):
+    def section(self, message=_const.CHAR_EMPTY, max_length=80, symbol=_const.CHAR_DASH):
         """
         Writes a centered message wrapped inside a section line to the log.
         When message exceeds *max_length*, it will be logged as-is.
@@ -493,9 +494,9 @@ class Logger(object):
         max_length -= len(self._log.name)
         msg_length = len(message)
         if msg_length < max_length - 2:
-            fill_char = _tu.SPACE   # default separator between line and message
+            fill_char = _const.CHAR_SPACE   # default separator between line and message
             if msg_length == 0:
-                fill_char = symbol  # separator if there is no message
+                fill_char = symbol          # separator if there is no message
             message = message.center(msg_length + 2, fill_char).center(max_length, symbol)
         self.info(message)
 

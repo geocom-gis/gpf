@@ -23,26 +23,6 @@ from datetime import datetime as _dt
 import gpf.common.const as _const
 import gpf.common.validate as _vld
 
-# Characters
-DOT = '.'
-SPACE = ' '
-UNDERSCORE = '_'
-DUNDER = '__'
-TAB = '\t'
-LF = '\n'
-CR = '\r'
-CRLF = CR + LF
-ASTERISK = '*'
-HASH = '#'
-DASH = '-'
-AND = 'and'
-OR = 'or'
-EMPTY_STR = _const.EMPTY_STR
-
-# Encodings
-DEFAULT_ENCODING = _const.DEFAULT_ENCODING
-UTF8_ENCODING = _const.UTF8_ENCODING
-
 
 def get_alphachars(text):
     """
@@ -58,7 +38,7 @@ def get_alphachars(text):
     :rtype:         str, unicode
     """
     _vld.pass_if(_vld.is_text(text), TypeError, "'text' attribute must be a string (got {!r})".format(text))
-    return EMPTY_STR.join(s for s in text if s.isalpha())
+    return _const.CHAR_EMPTY.join(s for s in text if s.isalpha())
 
 
 def get_digits(text):
@@ -77,10 +57,10 @@ def get_digits(text):
     :rtype:         str, unicode
     """
     _vld.pass_if(_vld.is_text(text), TypeError, "'text' attribute must be a string (got {!r})".format(text))
-    return EMPTY_STR.join(s for s in text if s.isdigit())
+    return _const.CHAR_EMPTY.join(s for s in text if s.isdigit())
 
 
-def to_str(value, encoding=UTF8_ENCODING):
+def to_str(value, encoding=_const.ENC_UTF8):
     """
     This function behaves similar to the built-in :func:`str` method: it converts any value into a string.
     However, if *value* is ``unicode``, it will be encoded according to the specified *encoding*.
@@ -101,12 +81,12 @@ def to_str(value, encoding=UTF8_ENCODING):
         try:
             return value.encode(encoding)
         except UnicodeError:
-            return value.encode(DEFAULT_ENCODING, errors='replace')
+            return value.encode(_const.ENC_DEFAULT, errors='replace')
     else:
         return str(value)
 
 
-def to_unicode(value, encoding=UTF8_ENCODING):
+def to_unicode(value, encoding=_const.ENC_UTF8):
     """
     This function behaves similar to the built-in :func:`unicode` method: it converts any value into a unicode object.
     However, if *value* is a ``str``, it will be decoded according to the specified *encoding*.
@@ -128,12 +108,12 @@ def to_unicode(value, encoding=UTF8_ENCODING):
         try:
             return value.decode(encoding)
         except UnicodeError:
-            return value.decode(DEFAULT_ENCODING, errors='replace')
+            return value.decode(_const.ENC_DEFAULT, errors='replace')
     else:
         return unicode(value)
 
 
-def to_repr(value, encoding=UTF8_ENCODING):
+def to_repr(value, encoding=_const.ENC_UTF8):
     """
     This function behaves similar to the built-in :func:`repr` method: it converts any value into its representation.
     However, if *value* is ``unicode``, it will be encoded according to the specified *encoding* (defaults to UTF-8).
@@ -211,11 +191,11 @@ def format_plural(word, number, plural_suffix='s'):
     _vld.pass_if(word[-1].isalpha(), ValueError, "'word' must end with an alphabetic character")
 
     if number == 1:
-        plural_suffix = EMPTY_STR
-    return type(word)(EMPTY_STR).join((str(number), SPACE, word, plural_suffix))
+        plural_suffix = _const.CHAR_EMPTY
+    return type(word)(_const.CHAR_EMPTY).join((str(number), _const.CHAR_SPACE, word, plural_suffix))
 
 
-def format_iterable(iterable, conjunction=AND):
+def format_iterable(iterable, conjunction=_const.TEXT_AND):
     """
     Function that pretty-prints an iterable, separated by commas and adding a conjunction before the last item.
 
@@ -234,10 +214,10 @@ def format_iterable(iterable, conjunction=AND):
 
     num_items = len(iterable)
     if num_items == 0:
-        return ''
+        return _const.CHAR_EMPTY
     if num_items == 1:
         return to_str(iterable[-1])
-    return '{} {} {}'.format(', '.join(to_str(v) for v in iterable[:-1]), conjunction, iterable[-1])
+    return '{} {} {}'.format(_const.TEXT_COMMASPACE.join(to_str(v) for v in iterable[:-1]), conjunction, iterable[-1])
 
 
 def format_timedelta(start, stop=None):

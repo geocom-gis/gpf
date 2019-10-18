@@ -21,17 +21,15 @@ The *fields* module contains helper functions related to working with Esri Field
                 and a :func:`~gpf.tools.metadata.Describe.get_editable_fields` function, which might also be helpful.
 """
 
+import gpf.common.const as _const
 import gpf.common.validate as _vld
 from gpf import arcpy as _arcpy
 
-OBJECTID = 'OID@'
-SHAPE = 'SHAPE@'
-SHAPE_AREA = 'SHAPE@AREA'
-SHAPE_LENGTH = 'SHAPE@LENGTH'
+_DEFAULT_TYPE = 'TEXT'
 
 #: Lookup dictionary to map ``Field`` types to the field types used in ArcPy's :func:`AddField` function.
 FIELDTYPE_MAPPING = {
-    'Text': 'TEXT',
+    'Text': _DEFAULT_TYPE,
     'Single': 'FLOAT',
     'Double': 'DOUBLE',
     'SmallInteger': 'SHORT',
@@ -46,7 +44,7 @@ FIELDTYPE_MAPPING = {
 def clone_field(field):
     """ Returns a deep copy (clone) of a Field object. """
     new_field = _arcpy.Field()
-    for attr in (f for f in dir(field) if not f.startswith('_')):
+    for attr in (f for f in dir(field) if not f.startswith(_const.CHAR_UNDERSCORE)):
         value = getattr(field, attr)
         setattr(new_field, attr, value)
     return new_field
@@ -106,7 +104,7 @@ def missing_fields(table, expected_fields):
     missing = []
     for f in expected_fields:
         field = f.upper()
-        if '@' in field:
+        if _const.CHAR_AT in field:
             if desc is None:
                 # Only describe the input table (= time-consuming) if @ has been used in a field name and only once
                 try:
@@ -114,10 +112,10 @@ def missing_fields(table, expected_fields):
                     desc = _arcpy.Describe(table)
                 except (RuntimeError, OSError, AttributeError, ValueError, TypeError):
                     desc = object()
-            if (field == OBJECTID and not getattr(desc, 'OIDFieldName', None)) or \
-               (field.startswith(SHAPE) and not getattr(desc, 'shapeFieldName', None)) or \
-               (field == SHAPE_LENGTH and not getattr(desc, 'lengthFieldName', None)) or \
-               (field == SHAPE_AREA and not getattr(desc, 'areaFieldName', None)):
+            if (field == _const.FIELD_OID and not getattr(desc, _const.DESC_FIELD_OID, None)) or \
+               (field.startswith(_const.FIELD_SHAPE) and not getattr(desc, _const.DESC_FIELD_SHAPE, None)) or \
+               (field == _const.FIELD_LENGTH and not getattr(desc, _const.DESC_FIELD_LENGTH, None)) or \
+               (field == _const.FIELD_AREA and not getattr(desc, _const.DESC_FIELD_AREA, None)):
                 missing.append(f)
             continue
         if field not in table_fields:
@@ -145,7 +143,7 @@ def add_field(dataset, name, template_field=None, alias=None):
                             or if the template field is of an unsupported type (i.e. GlobalID, OID or Geometry).
     """
 
-    field_type = 'TEXT'
+    field_type = _DEFAULT_TYPE
     field_alias = alias
     field_precision = None
     field_scale = None

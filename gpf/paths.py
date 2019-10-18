@@ -23,20 +23,16 @@ import os as _os
 from collections import Counter as _Counter
 from warnings import warn as _warn
 
+import gpf.common.const as _const
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 from gpf import arcpy as _arcpy
 
-ESRI_EXT_SDE = '.sde'
-ESRI_EXT_FGDB = '.gdb'
-ESRI_EXT_MDB = '.mdb'
-ESRI_EXT_ACCDB = '.accdb'
-
 ESRI_GDB_EXTENSIONS = (
-    ESRI_EXT_SDE,
-    ESRI_EXT_FGDB,
-    ESRI_EXT_MDB,
-    ESRI_EXT_ACCDB
+    _const.EXT_ESRI_SDE,
+    _const.EXT_ESRI_GDB,
+    _const.EXT_ESRI_MDB,
+    _const.EXT_ESRI_ADB
 )
 
 _ARG_SEP = 'separator'
@@ -179,7 +175,7 @@ def find_parent(path, name):
         name = _tu.to_str(name) if isinstance(name, unicode) else _tu.to_unicode(name)
 
     # Return the concatenated path parts up til the match (or an empty string if nothing was found)
-    return path_type(_os.sep).join(match_parts(parts, name)) or path_type(_tu.EMPTY_STR)
+    return path_type(_os.sep).join(match_parts(parts, name)) or path_type(_const.CHAR_EMPTY)
 
 
 class Path(object):
@@ -252,7 +248,7 @@ class Path(object):
         :type keep_dot:     bool
         :rtype:             str, unicode
         """
-        return self._ext if keep_dot else self._ext.lstrip(_tu.DOT)
+        return self._ext if keep_dot else self._ext.lstrip(_const.CHAR_DOT)
 
     def basename(self, keep_ext=True):
         """
@@ -292,7 +288,7 @@ class Path(object):
         """
         if not (self._ext and force):
             return self._path
-        sep = _tu.EMPTY_STR if extension.startswith(_tu.DOT) else _tu.DOT
+        sep = _const.CHAR_EMPTY if extension.startswith(_const.CHAR_DOT) else _const.CHAR_DOT
         return concat(self._head, '{}{}{}'.format(self.basename(False), sep, extension))
 
     def from_basename(self, basename):
@@ -439,7 +435,7 @@ def split_gdbpath(path, remove_qualifier=True):
     # Set the workspace path and return it if the path isn't any longer than that
     ws_path = '\\'.join(path_parts[:startpos])
     if num_parts == startpos:
-        return ws_path, _tu.EMPTY_STR, _tu.EMPTY_STR
+        return ws_path, _const.CHAR_EMPTY, _const.CHAR_EMPTY
 
     # If there are more than 2 levels (i.e. feature dataset and feature class), raise an error
     _vld.raise_if(num_parts > startpos + 2, ValueError, 'Geodatabase path cannot be more than 2 levels deep')
@@ -455,8 +451,8 @@ def split_gdbpath(path, remove_qualifier=True):
             if not meta.dataType == 'FeatureDataset':
                 raise ValueError
         except (RuntimeError, IOError, AttributeError, ValueError, NameError):
-            return ws_path, _tu.EMPTY_STR, last_parts[0]
-        return ws_path, last_parts[0], _tu.EMPTY_STR
+            return ws_path, _const.CHAR_EMPTY, last_parts[0]
+        return ws_path, last_parts[0], _const.CHAR_EMPTY
 
 
 def exists(path):
@@ -483,7 +479,7 @@ def unqualify(element):
 
     :return:    basestring
     """
-    return element.split(_tu.DOT)[-1]
+    return element.split(_const.CHAR_DOT)[-1]
 
 
 class Workspace(Path):
@@ -517,20 +513,20 @@ class Workspace(Path):
                         for which the properties cannot be retrieved, initialization will fail.
     """
 
-    def __init__(self, path, qualifier=_tu.EMPTY_STR, base=None, **kwargs):
+    def __init__(self, path, qualifier=_const.CHAR_EMPTY, base=None, **kwargs):
         super(Workspace, self).__init__(path, base)
-        self._is_remote = self.get_root(self._path.lower()).endswith(ESRI_EXT_SDE)
-        self._sep = kwargs.get(_ARG_SEP, _tu.DOT)
+        self._is_remote = self.get_root(self._path.lower()).endswith(_const.EXT_ESRI_SDE)
+        self._sep = kwargs.get(_ARG_SEP, _const.CHAR_DOT)
         self._qualifier = self._get_qualifier(qualifier)
         self._fds_lookup = {}
 
-    def _get_qualifier(self, qualifier=_tu.EMPTY_STR):
+    def _get_qualifier(self, qualifier=_const.CHAR_EMPTY):
         # Makes sure the qualifier (when specified) ends with a separator and returns it.
 
         if not self._is_remote or qualifier is None:
             # If it's an SDE/remote workspace (regardless of qualifier),
             # or when the qualifier is None, set it to an empty string.
-            qualifier = _tu.EMPTY_STR
+            qualifier = _const.CHAR_EMPTY
         if not qualifier and self._is_remote:
             try:
                 # For Oracle databases, the user name is the qualifier. We could derive that from the connection
@@ -577,7 +573,7 @@ class Workspace(Path):
         return concat(self._path, *(self.qualify(p, qualifier, separator) for p in parts if p))
 
     @staticmethod
-    def _fix_qualifier(qualifier=_tu.EMPTY_STR, separator=_tu.DOT):
+    def _fix_qualifier(qualifier=_const.CHAR_EMPTY, separator=_const.CHAR_DOT):
         # Appends the separator (.) to the qualifier if it is missing (and if there is a qualifier).
         if qualifier and not qualifier.endswith(separator):
             qualifier += separator
@@ -785,10 +781,11 @@ class Workspace(Path):
             self._fds_lookup = self._map_fds()
 
         table_name = unqualify(table)
-        fds = self._fds_lookup.get(table_name.lower(), (_tu.EMPTY_STR,))
+        fds = self._fds_lookup.get(table_name.lower(), (_const.CHAR_EMPTY,))
         if len(fds) > 1:
             # This case is rare, but it could happen (e.g. when qualifiers are different, but table name matches)
-            raise ValueError('{} could belong to {}'.format(_tu.to_repr(table_name), _tu.format_iterable(fds, _tu.OR)))
+            raise ValueError('{} could belong to {}'.format(_tu.to_repr(table_name),
+                                                            _tu.format_iterable(fds, _const.TEXT_OR)))
 
         qualifier = self._sep.join(fds[0].split(self._sep)[:-1])
         path = self._make_path(qualifier, self._sep, fds[0], table_name)

@@ -46,16 +46,16 @@ except RuntimeError as e:
     if _NOT_INITIALIZED in str(e):
         # If the rather obscure "RuntimeError: NotInitialized" error is thrown,
         # raise an ImportError instead with a clear reason.
-        raise ImportError('Failed to obtain an ArcGIS license for the {!r} module'.format(_const.ARCPY))
+        raise ImportError('Failed to obtain an ArcGIS license for the {!r} module'.format(_const.PYMOD_ARCPY))
     # Reraise for all other RuntimeErrors
     raise
 except ImportError:
-    if _const.ARCPY not in _sys.modules:
+    if _const.PYMOD_ARCPY not in _sys.modules:
         # If arcpy cannot be found in the system modules,
         # raise an ImportError that tells the user which interpreter is being used.
         # The user might have accidentally chosen a "vanilla" Python interpreter,
         # instead of the ArcGIS Python distribution.
         raise ImportError('Python interpreter at {!r} '
-                          'cannot find the {!r} module'.format(_sys.executable, _const.ARCPY))
+                          'cannot find the {!r} module'.format(_sys.executable, _const.PYMOD_ARCPY))
     # Reraise for other (unlikely) ImportErrors
     raise

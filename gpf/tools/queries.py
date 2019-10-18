@@ -22,6 +22,7 @@ import gpf.common.guids as _guids
 import gpf.common.iterutils as _iter
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
+import gpf.common.const as _const
 from gpf import arcpy as _arcpy
 
 WHERE_KWARG = 'where_clause'
@@ -82,8 +83,8 @@ class Where(object):
     """
 
     # Private class constants
-    __SQL_OR = 'or'
-    __SQL_AND = 'and'
+    __SQL_OR = _const.TEXT_OR
+    __SQL_AND = _const.TEXT_AND
     __SQL_IN = 'in'
     __SQL_NOT_IN = 'not in'
     __SQL_NULL = 'is null'
@@ -205,7 +206,7 @@ class Where(object):
         :return:    An SQL expression string for ArcGIS tools.
         :rtype:     str, unicode
         """
-        return """{}""".format(_tu.SPACE.join(self._parts))
+        return """{}""".format(_const.CHAR_SPACE.join(self._parts))
 
     def _add_expression(self, operator, *values):
         """
@@ -225,7 +226,7 @@ class Where(object):
         if operator not in (self.__SQL_NULL, self.__SQL_NOT_NULL):
             values = self._fix_values(*values, check_only=is_between)
             if operator.endswith(self.__SQL_IN):
-                self._parts.append('({})'.format(', '.join(values)))
+                self._parts.append('({})'.format(_const.TEXT_COMMASPACE.join(values)))
             elif is_between:
                 self._between(operator, *values)
             else:

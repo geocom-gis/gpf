@@ -22,8 +22,8 @@ that can be used to store all kinds of data in a memory-efficient and object-ori
 from collections import OrderedDict
 from collections import namedtuple
 
+import gpf.common.const as _const
 import gpf.common.iterutils as _iter
-import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 
 _DUMMY = 'dummy'
@@ -58,7 +58,7 @@ class BucketFactory(object):
     """
 
     def __init__(self, *attributes):
-        self._blacklist = frozenset(dir(Bucket) + dir(namedtuple(_DUMMY, _tu.EMPTY_STR)))
+        self._blacklist = frozenset(dir(Bucket) + dir(namedtuple(_DUMMY, _const.CHAR_EMPTY)))
 
         _vld.pass_if(attributes, TypeError,
                      '{!r} must be instantiated with 1 or more attribute names'.format(BucketFactory.__name__))
@@ -69,8 +69,8 @@ class BucketFactory(object):
     def _fix_attr(attr_name):
         """ Fixes the attribute name so that all special chars become underscores. First char must be alphanumeric. """
         _vld.pass_if(attr_name[0].isalpha(), ValueError, 'Bucket field names must start with a letter')
-        fixed_name = _tu.EMPTY_STR.join(char if char.isalnum() else _tu.UNDERSCORE for char in attr_name)
-        return fixed_name.strip(_tu.UNDERSCORE)
+        fixed_name = _const.CHAR_EMPTY.join(char if char.isalnum() else _const.CHAR_UNDERSCORE for char in attr_name)
+        return fixed_name.strip(_const.CHAR_UNDERSCORE)
 
     def _set_attrs(self, attributes):
         """ Checks and fixes all attribute names. """
@@ -185,7 +185,7 @@ class Bucket(object):
     def __repr__(self):
         """ Returns a representation of the instance. """
         f_items = ('{}={!r}'.format(name, value) for name, value in self.items())
-        return '{}({})'.format(Bucket.__name__, ', '.join(f_items))
+        return '{}({})'.format(Bucket.__name__, _const.TEXT_COMMASPACE.join(f_items))
 
     def __iter__(self):
         """ Returns an iterator over the stored values. """
@@ -282,8 +282,9 @@ def get_bucket_class(field_names, writable=True):
     .. seealso::    :class:`BucketFactory`, :class:`Bucket`, :class:`FrozenBucket`
     """
     # Input validation
-    _vld.raise_if(field_names == _tu.ASTERISK, NotImplementedError,
-                  "{} does not support {!r} as 'field_names' attribute".format(get_bucket_class.__name__, _tu.ASTERISK))
+    _vld.raise_if(field_names == _const.CHAR_ASTERISK, NotImplementedError,
+                  "{} does not support {!r} as 'field_names' attribute".
+                  format(get_bucket_class.__name__, _const.CHAR_ASTERISK))
     _vld.pass_if(_vld.is_iterable(field_names), TypeError, "'field_names' attribute must be an iterable")
 
     rec_fields = _iter.collapse(field_names, levels=1)
