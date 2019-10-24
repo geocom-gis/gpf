@@ -295,30 +295,45 @@ class Logger(object):
 
     Standard logger class that logs to stdout (e.g. console) and optionally a file.
 
-    :param identity:    The name of the owner of this Logger, as it will appear in the log file entries.
-    :param log_file:    Optional log file name or path to the log file.
-                        If there's already a log handler for this file, this handler will be used automatically.
+    **Params:**
 
-                        - If *log_file* does not have an extension, a *.log* extension will be added.
-                        - If *log_file* has an extension, but it's not *.txt* or *.log*, it will be reset to *.log*.
-                        - If *time_tag* is ``True`` (default), a *_YYMMDD_HHMMSS* timestamp (current local time) \
-                          will be added to the log file name automatically.
-                        - If *log_file* is just a name, the output directory will be set to the user temp directory.
-                        - If *log_file* is a relative path, it will be made absolute (relative to ``os.curdir``).
-                        - If *log_file* is an absolute path, that path will be used as-is.
-                        - If the log directory of *log_file* does not exist, it will be created.
+    -   **identity** (str, unicode):
 
-                        When *log_file* is omitted, the Logger will only write to the stdout stream (e.g. console).
-    :param level:       The minimum log level of messages that should be logged. Defaults to INFO.
-    :keyword max_name:  The maximum length of the logger name used in the log record. Defaults to 15.
-    :keyword encoding:  The encoding to use in log **files**. Defaults to the preferred system encoding.
-    :keyword time_tag:  When set to ``True`` (default), a timestamp will be appended to the log file name.
-    :type identity:     str, unicode
-    :type log_file:     str, unicode, :class:`gpf.paths.Path`
-    :type level:        int
-    :type encoding:     str
-    :type time_tag:     bool
-    :type max_name:     int
+        The name of the owner of this Logger, as it will appear in the log file entries.
+
+    -   **log_file** (str, unicode, :class:`gpf.paths.Path`):
+
+        Optional log file name or path to the log file.
+        If there's already a log handler for this file, this handler will be used automatically.
+
+        - If *log_file* does not have an extension, a *.log* extension will be added.
+        - If *log_file* has an extension, but it's not *.txt* or *.log*, it will be reset to *.log*.
+        - If *time_tag* is ``True`` (default), a *_YYMMDD_HHMMSS* timestamp (current local time) \
+          will be added to the log file name automatically.
+        - If *log_file* is just a name, the output directory will be set to the user temp directory.
+        - If *log_file* is a relative path, it will be made absolute (relative to ``os.curdir``).
+        - If *log_file* is an absolute path, that path will be used as-is.
+        - If the log directory of *log_file* does not exist, it will be created.
+
+        When *log_file* is omitted, the Logger will only write to the stdout stream (e.g. console).
+
+    -   **level** (int):
+
+        The minimum log level of messages that should be logged. Defaults to INFO.
+
+    **Keyword params:**
+
+    -   **max_name** (int):
+
+        The maximum length of the logger name used in the log record. Defaults to 15.
+
+    -   **encoding** (str):
+
+        The encoding to use in log **files**. Defaults to the preferred system encoding.
+
+    -   **time_tag** (bool):
+
+        When set to ``True`` (default), a timestamp will be appended to the log file name.
     """
 
     def __init__(self, identity, log_file=None, level=LOG_INFO, **options):
@@ -568,29 +583,50 @@ class Logger(object):
 
 class ArcLogger(Logger):
     """
-    ArcLogger(identity, {log_file}, {level}, {encoding},
+    ArcLogger(identity, {log_file}, {level}, {encoding}, {time_tag}, {max_name})
 
     Logger that forwards all messages to ArcGIS and optionally logs to a file.
     Forwarding messages to ArcGIS is only useful when logging from an ArcToolbox or GEONIS Python script.
 
-    :param identity:    The name of the owner of this Logger, as it will appear in the log file entries.
-    :param log_file:    Optional log file name or path to the log file.
-                        If there's already a log handler for this file, this handler will be used automatically.
+    **Params:**
 
-                        - If *log_file* does not have an extension, a *.log* extension will be added.
-                        - If *log_file* has an extension, but it's not *.txt* or *.log*, it will be reset to *.log*.
-                        - If *time_tag* is ``True`` (default), a *_YYMMDD_HHMMSS* timestamp (current local time) \
-                          will be added to the log file name automatically.
-                        - If *log_file* is just a name, the output directory will be set to the user temp directory.
-                        - If *log_file* is a relative path, it will be made absolute (relative to ``os.curdir``).
-                        - If *log_file* is an absolute path, that path will be used as-is.
-                        - If the log directory of *log_file* does not exist, it will be created.
+    -   **identity** (str, unicode):
 
-                        When *log_file* is omitted, the Logger will only write to the stdout stream (e.g. console).
-    :param level:       The minimum log level of messages that should be logged. Defaults to INFO.
-    :keyword encoding:  The encoding to use in log files (only). Defaults to Latin-1 a.k.a. cp1252.
-    :keyword time_tag:  When set to True (default), a timestamp will be appended to the log file name.
-    :keyword max_name:  The maximum length of the logger name used in the log record. Defaults to 15.
+        The name of the owner of this Logger, as it will appear in the log file entries.
+
+    -   **log_file** (str, unicode, :class:`gpf.paths.Path`):
+
+        Optional log file name or path to the log file.
+        If there's already a log handler for this file, this handler will be used automatically.
+
+        - If *log_file* does not have an extension, a *.log* extension will be added.
+        - If *log_file* has an extension, but it's not *.txt* or *.log*, it will be reset to *.log*.
+        - If *time_tag* is ``True`` (default), a *_YYMMDD_HHMMSS* timestamp (current local time) \
+          will be added to the log file name automatically.
+        - If *log_file* is just a name, the output directory will be set to the user temp directory.
+        - If *log_file* is a relative path, it will be made absolute (relative to ``os.curdir``).
+        - If *log_file* is an absolute path, that path will be used as-is.
+        - If the log directory of *log_file* does not exist, it will be created.
+
+        When *log_file* is omitted, the Logger will only write to the stdout stream (e.g. console).
+
+    -   **level** (int):
+
+        The minimum log level of messages that should be logged. Defaults to INFO.
+
+    **Keyword params:**
+
+    -   **max_name** (int):
+
+        The maximum length of the logger name used in the log record. Defaults to 15.
+
+    -   **encoding** (str):
+
+        The encoding to use in log files (only). Defaults to cp1252 on Windows.
+
+    -   **time_tag** (bool):
+
+        When set to ``True`` (default), a timestamp will be appended to the log file name.
     """
 
     def __init__(self, identity, log_file=None, level=LOG_INFO, **options):

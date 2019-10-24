@@ -188,12 +188,17 @@ class Path(object):
     Note that *path* (and *base*) are never explicitly checked for existence.
     If the user wishes to validate these paths, use the :func:`exists`, :func:`is_file` or :func:`is_dir` properties.
 
-    :param path:    The file or directory path on which to operate.
-    :param base:    When set to a directory path, the ``Path`` class assumes
-                    that *path* is relative to this *base* directory and will make *path* absolute.
-                    Otherwise, it will leave *path* unchanged (whether absolute or relative).
-    :type path:     str, unicode
-    :type base:     str, unicode
+    **Params:**
+
+    -   **path** (str, unicode):
+
+        The file or directory path on which to operate.
+
+    -   **base** (str, unicode):
+
+        When set to a directory path, the ``Path`` class assumes that *path* is relative
+        to this *base* directory and will make *path* absolute.
+        Otherwise, it will leave *path* unchanged (whether absolute or relative).
 
     .. note::       In Python 3 (``gpf3`` package), this class shadows the built-in ``pathlib.Path`` class.
 
@@ -484,7 +489,7 @@ def unqualify(element):
 
 class Workspace(Path):
     """
-    Workspace(path, {qualifier=''}, {root=None}, {separator='.'})
+    Workspace(path, {qualifier=''}, {base=None}, {separator='.'})
 
     Helper class to generate fully qualified paths for elements (tables, feature datasets etc.) in an Esri workspace.
     An Esri Workspace can be anything ranging from an SDE connection file to a File Geodatabase folder or a simple
@@ -498,17 +503,29 @@ class Workspace(Path):
     simply call :func:`str` on the ``Workspace`` instance.
     Note that the ``Workspace`` class can also behave like a context manager using the ``with`` statement.
 
-    :param path:        The workspace path (e.g. File Geodatabase, SDE connection file) or name.
-    :param qualifier:   An optional database qualifier. If not set and *workspace* is a remote database,
-                        the qualifier will be equal to the DB user specified in the SDE connection file.
-    :param base:        When this is set to a directory path, the *Workspace* assumes
-                        that *workspace* is relative to this *base* directory and will make *workspace* absolute.
-                        Otherwise, it will leave *workspace* unchanged (whether absolute or relative).
-    :keyword separator: Optional separator (default = ``'.'``) between the qualifier and the data element name.
-    :type path:         str, unicode
-    :type qualifier:    str, unicode
-    :type base:         str, unicode
-    :type separator:    str, unicode
+    **Params:**
+
+    -   **path** (str, unicode):
+
+        The workspace path (e.g. File Geodatabase, SDE connection file) or name.
+
+    -   **qualifier** (str, unicode):
+
+        An optional database qualifier. If not set and *workspace* is a remote database,
+        the qualifier will be equal to the DB user specified in the SDE connection file.
+
+    -   **base** (str, unicode):
+
+        When set to a directory path, the ``Workspace`` class assumes that *path* is relative
+        to this *base* directory and will make *path* absolute.
+        Otherwise, it will leave *path* unchanged (whether absolute or relative).
+
+    **Keyword params:**
+
+    -   **separator** (str, unicode):
+
+        Optional separator (default = ``'.'``) between the qualifier and the data element name.
+
     :raises ValueError: If *qualifier* has not been set and the workspace is an existing remote database
                         for which the properties cannot be retrieved, initialization will fail.
     """

@@ -72,14 +72,22 @@ class Where(object):
         >>> Where(Where('A', '=', 1) & Where('B', '=', 0)) | Where('C', 'is null')
         (A = 1 AND B = 0) OR C IS NULL
 
-    :param where_field: The initial field to start the where clause, or another `Where` instance.
-    :param operator:    Operator string (e.g. *between*, *in*, *<*, *=*, *is null*, etc.).
-    :arg values:        The conditional values that must be met for the specified field and operator.
-                        Multiple values and iterables will all be flattened (one level), sorted and de-duped.
-                        For the *is null* and *is not null* operators, values will be ignored.
-                        For all operators except *(not) between* and *(not) in*, only the first value will be used.
-    :type where_field:  str, unicode, gpf.tools.queries.Where
-    :type operator:     str, unicode
+    **Params:**
+
+    -   **where_field** (str, unicode, gpf.tools.queries.Where):
+
+        The initial field to start the where clause, or another `Where` instance.
+
+    -   **operator** (str, unicode):
+
+        Operator string (e.g. *between*, *in*, *<*, *=*, *is null*, etc.).
+
+    -   **values**:
+
+        The conditional values that must be met for the specified field and operator.
+        Multiple values and iterables will all be flattened (one level), sorted and de-duped.
+        For the *is null* and *is not null* operators, values will be ignored.
+        For all operators except *(not) between* and *(not) in*, only the first value will be used.
     """
 
     # Private class constants

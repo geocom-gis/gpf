@@ -49,10 +49,13 @@ class BucketFactory(object):
 
     Factory class to create :class:`FrozenBucket` or :class:`Bucket` classes.
 
-    :param attributes:  The property names to define in the :class:`FrozenBucket` or :class:`Bucket`.
-                        Note that all names are transformed to lowercase and that non-alphanumeric characters are
-                        replaced by underscores to ensure valid Python attribute names.
-    :type attributes:   str, unicode
+    **Params:**
+
+    -   **attributes** (str, unicode):
+
+        The property names to define in the :class:`FrozenBucket` or :class:`Bucket`.
+        Note that all names are transformed to lowercase and that non-alphanumeric characters are
+        replaced by underscores to ensure valid Python attribute names.
 
     .. seealso::    :class:`Bucket`, :class:`FrozenBucket`
     """

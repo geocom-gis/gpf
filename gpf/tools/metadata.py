@@ -44,14 +44,18 @@ class Describe(object):
     consider using the :func:`get` function, which behaves similar to a :func:`dict.get`
     and can return a user-defined default value if the property was not found.
 
+    **Params:**
+
+    -   **element** (object):
+
+        An object, name, or path of an element for which to retrieve its metadata.
+
     .. note::   Only a limited amount of properties has been exposed in this class.
                 For a complete list of all possible properties, please have a look `here`_.
                 For these unlisted properties, the same rule applies: if it doesn't exist,
                 ``None`` is returned. If another return value is required, use :func:`get`.
 
     .. _here:   https://desktop.arcgis.com/en/arcmap/latest/analyze/arcpy-functions/describe-object-properties.htm
-
-    :param element:     The data element to describe.
     """
 
     # Exposed properties
