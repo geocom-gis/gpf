@@ -159,6 +159,38 @@ def has_value(obj, strip=False):
     return True
 
 
+def signature_matches(func, template_func):
+    """
+    Checks if the given *func* is of type `function` or `instancemethod`.
+    If it is, it also verifies if the argument count matches the one from the given *template_func*.
+    When the function is not callable or the signature does not match, ``False`` is returned.
+
+    :param func:            A callable function or instance method.
+    :param template_func:   A template function to which the callable function argument count should be compared.
+    :rtype:                 bool
+    """
+
+    def _get_argcount(f):
+        """ Returns the argument count for a function (offset by 1 if the function is an instance method). """
+        offset = 0
+        if hasattr(f, 'im_func'):
+            # Function is an instance method (with a 'self' argument): offset argument count by 1
+            f = f.im_func
+            offset = 1
+        if not hasattr(f, 'func_code'):
+            return None
+        return f.func_code.co_argcount - offset
+
+    f_args = _get_argcount(func)
+    t_args = _get_argcount(template_func)
+
+    if f_args is None or t_args is None:
+        # One or both functions are not of type `function` or `instancemethod`
+        return False
+
+    return f_args == t_args
+
+
 def pass_if(expression, exc_type, exc_val=''):
     """
     Raises an error of type *err_type* when *expression* is **falsy** and silently passes otherwise.
