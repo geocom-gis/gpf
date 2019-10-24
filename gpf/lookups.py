@@ -16,10 +16,9 @@
 
 """
 This module can be used to build lookup data structures from Esri tables and feature classes.
-"""
 
-from abc import ABCMeta
-from abc import abstractmethod
+.. automethod:: gpf.lookups._process_row
+"""
 
 import gpf.common.const as _const
 import gpf.common.textutils as _tu
@@ -30,7 +29,7 @@ import gpf.tools.metadata as _meta
 
 _DUPEKEYS_ARG = 'duplicate_keys'
 _MUTABLE_ARG = 'mutable_values'
-_SINGLEVAL_ARG = 'single_value'
+_ROWFUNC_ARG = 'row_func'
 
 #: The default (Esri-recommended) resolution that is used by the :func:`get_nodekey` function (i.e. for lookups).
 #: If coordinate values fall within this distance, they are considered equal.
@@ -89,18 +88,84 @@ def get_coordtuple(node_key):
     return tuple((v * XYZ_RESOLUTION) for v in node_key)
 
 
-class _BaseLookup(dict):
+# noinspection PyUnusedLocal
+def _process_row(lookup, row, **kwargs):
     """
-    Abstract base class for all lookups.
-    Refer to the implementations (RowLookup, ValueLookup) for documentation.
+    The default row processor function used by the :class:`Lookup` class.
+    Alternative row processor functions are implemented by the other lookup classes (e.g. :class:`ValueLookup`).
+
+    :param lookup:  A reference to the lookup dictionary.
+                    If the process_row() function is built in to a lookup class, *lookup* refers to *self*.
+    :param row:     The current row tuple (as returned by a :class:`SearchCursor`).
+    :param kwargs:  Optional user-defined keyword arguments.
+    :rtype:         None, str, unicode
+
+    .. note::       This "private" function is documented here, so that users can see its signature and behaviour.
+                    However, users should **not** call this function directly, but define their own functions
+                    based on this one, using the same function signature.
+
+                    Row processor functions directly manipulate (i.e. populate) the dictionary.
+                    Typically, this function should at least add a key and value(s) to the *lookup* dictionary.
+
+                    **A row function should always return ``None``, unless the user wants to terminate the lookup.**
+                    In that case, a failure reason (message) should be returned.
     """
-    __metaclass__ = ABCMeta
+    key, v = row[0], row[1:] if len(row) > 2 else row[1]
+    if key is None:
+        return
+    lookup[key] = v
+
+
+class Lookup(dict):
+    """
+    Lookup(table_path, key_field, value_field(s), {where_clause}, {**kwargs})
+
+    Base class for all lookups.
+
+    This class can be instantiated directly, but typically, a user would create a custom lookup class based on
+    this one and then override the :func:`Lookup._process_row` method.
+    Please refer to other implementations (:class:`RowLookup`, :class:`ValueLookup`) for concrete examples.
+
+    **Params:**
+
+    -   **table_path** (str, unicode):
+
+        Full source table or feature class path.
+
+    -   **key_field** (str, unicode):
+
+        The field to use for the lookup dictionary keys.
+        If *SHAPE@X[Y[Z]]* is used as the key field, the coordinates are "hashed" using the
+        :func:`gpf.lookups.get_nodekey` function.
+        This means, that the user should use this function as well in order to
+        to create a coordinate key prior to looking up the matching value for it.
+
+    -   **value_fields** (list, tuple, str, unicode):
+
+        The field or fields to include as the lookup dictionary value(s), i.e. row.
+        This is the value (or tuple of values) that is returned when you perform a lookup by key.
+
+    -   **where_clause** (str, unicode, :class:`gpf.tools.queries.Where`):
+
+        An optional where clause to filter on.
+
+    **Keyword params:**
+
+    -   **row_func**:
+
+        If the user wishes to call the standard `Lookup` class but simply wants to use
+        a custom row processor function, you can pass in this function using the keyword *row_func*.
+
+    :raises RuntimeError:       When the lookup cannot be created or populated.
+    :raises ValueError:         When a specified lookup field does not exist in the source table,
+                                or when multiple value fields were specified.
+    """
 
     def __init__(self, table_path, key_field, value_fields, where_clause=None, **kwargs):
         super(dict, self).__init__()
 
         fields = tuple([key_field] + list(value_fields if _vld.is_iterable(value_fields) else (value_fields, )))
-        self._iscoordkey = key_field.upper().startswith(_const.FIELD_X)
+        self._hascoordkey = key_field.upper().startswith(_const.FIELD_X)
         self._populate(table_path, fields, where_clause, **kwargs)
 
     @staticmethod
@@ -127,23 +192,42 @@ class _BaseLookup(dict):
                          ValueError, 'Field {} does not exist'.format(field))
 
     @staticmethod
-    def _parse_kwargs(**kwargs):
-        """
-        Returns a tuple of (bool, bool) for the _populate() function.
+    def _has_self(row_func):
+        """ Checks if `func` is an instance method or function and checks if it's a valid row processor. """
+        if _vld.signature_matches(row_func, Lookup._process_row):
+            # row_func is an instance method (signature matches the default self._process_row())
+            return True
+        elif _vld.signature_matches(row_func, _process_row):
+            # row_func is a regular function (signature matches _process_row())
+            return False
+        else:
+            raise ValueError('Row processor function has a bad signature')
 
-        :rtype: tuple
-        """
-        dupe_keys = kwargs.get(_DUPEKEYS_ARG, False)
-        is_mutable = kwargs.get(_MUTABLE_ARG, False)
-        return dupe_keys, is_mutable
+    def _process_row(self, row, **kwargs):
+        """ Instance method version of the :func:`_process_row` module function. """
+        return _process_row(self, row, **kwargs)
 
-    @abstractmethod
     def _populate(self, table_path, fields, where_clause=None, **kwargs):
-        """ Abstract method to populate the lookup. """
-        pass
+        """ Populates the lookup with data, calling _process_row() on each row returned by the SearchCursor. """
+        try:
+            # Validate fields
+            self._check_fields(fields, self._get_fields(table_path))
+
+            # Validate row processor function (if any)
+            row_func = kwargs.get(_ROWFUNC_ARG, self._process_row)
+            has_self = self._has_self(row_func)
+
+            for row in _cursors.SearchCursor(table_path, fields, where_clause):
+                failed = row_func(row, **kwargs) if has_self else row_func(self, row, **kwargs)
+                if failed:
+                    raise Exception(failed)
+
+        except Exception as e:
+            raise RuntimeError('Failed to create {} for {}: {}'.format(self.__class__.__name__,
+                                                                       _tu.to_repr(table_path), e))
 
 
-class ValueLookup(_BaseLookup):
+class ValueLookup(Lookup):
     """
     ValueLookup(table_path, key_field, value_field, {where_clause}, {duplicate_keys})
 
@@ -153,31 +237,45 @@ class ValueLookup(_BaseLookup):
 
     When an empty key (``None``) is encountered, the key-value pair will be discarded.
 
-    :param table_path:          Full source table or feature class path.
-    :param key_field:           The field to use for the ValueLookup dictionary keys.
-                                If `SHAPE@XY` is used as the key field, the coordinates are "hashed" using the
-                                :func:`~gpf.lookups.get_nodekey` function.
-                                This means, that the user should use this function as well in order to
-                                to create a coordinate key prior to looking up the matching value for it.
-    :param value_field:         The single field to include in the ValueLookup dictionary value.
-                                This is the value that is returned when you perform a lookup by key.
-    :param where_clause:        An optional where clause to filter the table.
-    :keyword duplicate_keys:    If ``True``, the ValueLookup allows for duplicate keys in the input.
-                                The dictionary values will become **lists** of values instead of a **single** value.
-                                Please note that actual duplicate checks will not be performed. This means, that
-                                when *duplicate_keys* is ``False`` and duplicates *are* encountered,
-                                the last existing key-value pair will be overwritten.
-    :type table_path:           str, unicode
-    :type key_field:            str, unicode
-    :type value_field:          str, unicode
-    :type where_clause:         str, unicode, gpf.tools.queries.Where
-    :type duplicate_keys:       bool
+    **Params:**
+
+    -   **table_path** (str, unicode):
+
+        Full source table or feature class path.
+
+    -   **key_field** (str, unicode):
+
+        The field to use for the ValueLookup dictionary keys.
+        If *SHAPE@X[Y[Z]]* is used as the key field, the coordinates are "hashed" using the
+        :func:`gpf.lookups.get_nodekey` function.
+        This means, that the user should use this function as well in order to
+        to create a coordinate key prior to looking up the matching value for it.
+
+    -   **value_field** (str, unicode):
+
+        The single field to include in the ValueLookup dictionary value.
+        This is the value that is returned when you perform a lookup by key.
+
+    -   **where_clause** (str, unicode, :class:`gpf.tools.queries.Where`):
+
+        An optional where clause to filter the table.
+
+    **Keyword params:**
+
+    -   **duplicate_keys** (bool):
+
+        If ``True``, the ValueLookup allows for duplicate keys in the input.
+        The dictionary values will become **lists** of values instead of a **single** value.
+        Please note that actual duplicate checks will not be performed. This means, that
+        when *duplicate_keys* is ``False`` and duplicates *are* encountered,
+        the last existing key-value pair will be overwritten.
+
     :raises RuntimeError:       When the lookup cannot be created or populated.
     :raises ValueError:         When a specified lookup field does not exist in the source table,
                                 or when multiple value fields were specified.
 
     .. seealso::                When multiple fields should be stored in the lookup,
-                                the :class:`~gpf.lookups.RowLookup` class should be used instead.
+                                the :class:`gpf.lookups.RowLookup` class should be used instead.
     """
 
     def __init__(self, table_path, key_field, value_field, where_clause=None, **kwargs):
@@ -186,32 +284,29 @@ class ValueLookup(_BaseLookup):
                                                                                RowLookup.__name__))
         _vld.pass_if(all(_vld.has_value(v) for v in (table_path, key_field, value_field)), ValueError,
                      '{} requires valid table_path, key_field and value_field arguments')
+
+        # User cannot override row processor function for this class
+        if _ROWFUNC_ARG in kwargs:
+            del kwargs[_ROWFUNC_ARG]
+
+        self._dupekeys = kwargs.get(_DUPEKEYS_ARG, False)
         super(ValueLookup, self).__init__(table_path, key_field, value_field, where_clause, **kwargs)
 
-    def _populate(self, table_path, fields, where_clause=None, **kwargs):
-        """ Populates the ValueLookup dictionary. """
-        try:
-            self._check_fields(fields, self._get_fields(table_path))
-            dupe_keys, _ = self._parse_kwargs(**kwargs)
-            for key, value in _cursors.SearchCursor(table_path, fields, where_clause):
-                if key is None:
-                    continue
-
-                if self._iscoordkey:
-                    key = get_nodekey(*key)
-
-                if dupe_keys:
-                    v = self.setdefault(key, [])
-                    v.append(value)
-                else:
-                    self[key] = value
-
-        except Exception as e:
-            raise RuntimeError('Failed to create {} for {}: {}'.format(ValueLookup.__name__,
-                                                                       _tu.to_repr(table_path), e))
+    def _process_row(self, row, **kwargs):
+        """ Row processor function override. """
+        key, value = row
+        if key is None:
+            return
+        if self._hascoordkey:
+            key = get_nodekey(*key)
+        if self._dupekeys:
+            v = self.setdefault(key, [])
+            v.append(value)
+        else:
+            self[key] = value
 
 
-class RowLookup(_BaseLookup):
+class RowLookup(Lookup):
     """
     RowLookup(table_path, key_field, value_fields, {where_clause}, {duplicate_keys}, {mutable_values})
 
@@ -221,36 +316,52 @@ class RowLookup(_BaseLookup):
 
     When an empty key (``None``) is encountered, the key-values pair will be discarded.
 
-    :param table_path:          Full table or feature class path.
-    :param key_field:           The field to use for the RowLookup dictionary keys.
-                                If `SHAPE@XY` is used as the key field, the coordinates are "hashed" using the
-                                :func:`gpf.tools.lookup.get_nodekey` function.
-                                This means, that the user should use this function as well in order to
-                                to create a coordinate key prior to looking up the matching values for it.
-    :param value_fields:        The fields to include in the RowLookup dictionary values.
-                                These are the values that are returned when you perform a lookup by key.
-    :param where_clause:        An optional where clause to filter the table.
-    :keyword duplicate_keys:    If ``True``, the RowLookup allows for duplicate keys in the input.
-                                The values will become **lists** of tuples/lists instead of a **single** tuple/list.
-                                Please note that duplicate checks will not actually be performed. This means, that
-                                when *duplicate_keys* is ``False`` and duplicates are encountered,
-                                the last existing key-value pair will be simply overwritten.
-    :keyword mutable_values:    If ``True``, the RowLookup values are stored as ``list`` objects.
-                                These are mutable, which means that you can change the values or add new ones.
-                                The default is ``False``, which causes the RowLookup values to become ``tuple`` objects.
-                                These are immutable, which consumes less memory and allows for faster retrieval.
-    :type table_path:           str, unicode
-    :type key_field:            str, unicode
-    :type value_fields:         list, tuple
-    :type where_clause:         str, unicode, ~gpf.tools.queries.Where
-    :type duplicate_keys:       bool
-    :type mutable_values:       bool
+    **Params:**
+
+    -   **table_path** (str, unicode):
+
+        Full source table or feature class path.
+
+    -   **key_field** (str, unicode):
+
+        The field to use for the RowLookup dictionary keys.
+        If *SHAPE@X[Y[Z]]* is used as the key field, the coordinates are "hashed" using the
+        :func:`gpf.tools.lookup.get_nodekey` function.
+        This means, that the user should use this function as well in order to
+        to create a coordinate key prior to looking up the matching values for it.
+
+    -   **value_field** (str, unicode):
+
+        The fields to include in the RowLookup dictionary values.
+        These are the values that are returned when you perform a lookup by key.
+
+    -   **where_clause** (str, unicode, :class:`gpf.tools.queries.Where`):
+
+        An optional where clause to filter the table.
+
+    **Keyword params:**
+
+    -   **duplicate_keys** (bool):
+
+        If ``True``, the RowLookup allows for duplicate keys in the input.
+        The values will become **lists** of tuples/lists instead of a **single** tuple/list.
+        Please note that duplicate checks will not actually be performed. This means, that
+        when *duplicate_keys* is ``False`` and duplicates are encountered,
+        the last existing key-value pair will be simply overwritten.
+
+    -   **mutable_values** (bool):
+
+        If ``True``, the RowLookup values are stored as ``list`` objects.
+        These are mutable, which means that you can change the values or add new ones.
+        The default is ``False``, which causes the RowLookup values to become ``tuple`` objects.
+        These are immutable, which consumes less memory and allows for faster retrieval.
+
     :raises RuntimeError:       When the lookup cannot be created or populated.
     :raises ValueError:         When a specified lookup field does not exist in the source table,
                                 or when a single value field was specified.
 
     .. seealso::                When a single field value should be stored in the lookup,
-                                the :class:`~gpf.lookups.ValueLookup` class should be used instead.
+                                the :class:`gpf.lookups.ValueLookup` class should be used instead.
     """
 
     def __init__(self, table_path, key_field, value_fields, where_clause=None, **kwargs):
@@ -259,38 +370,35 @@ class RowLookup(_BaseLookup):
         _vld.pass_if(all(_vld.has_value(v) for v in (table_path, key_field, value_fields[0])), ValueError,
                      '{} requires valid table_path, key_field and value_fields arguments')
 
+        # User cannot override row processor function for this class
+        if _ROWFUNC_ARG in kwargs:
+            del kwargs[_ROWFUNC_ARG]
+
+        self._dupekeys = kwargs.get(_DUPEKEYS_ARG, False)
+        self._rowtype = list if kwargs.get(_MUTABLE_ARG, False) else tuple
         super(RowLookup, self).__init__(table_path, key_field, value_fields, where_clause, **kwargs)
 
         self._fieldmap = {name.lower(): i for i, name in enumerate(value_fields)}
 
-    def _populate(self, table_path, fields, where_clause=None, **kwargs):
-        """ Populates the RowLookup dictionary. """
-        try:
-            self._check_fields(fields, self._get_fields(table_path))
-            dupe_keys, is_mutable = self._parse_kwargs(**kwargs)
-            cast_type = list if is_mutable else tuple
-            for row in _cursors.SearchCursor(table_path, fields, where_clause):
-                key, values = row[0], cast_type(row[1:])
-                if key is None:
-                    continue
+    def _process_row(self, row, **kwargs):
+        """ Row processor function override. """
+        key, values = row[0], self._rowtype(row[1:])
+        if key is None:
+            return
+        if self._hascoordkey:
+            key = get_nodekey(*key)
+        if self._dupekeys:
+            v = self.setdefault(key, [])
+            v.append(values)
+        else:
+            self[key] = values
 
-                if self._iscoordkey:
-                    key = get_nodekey(*key)
-
-                if dupe_keys:
-                    v = self.setdefault(key, [])
-                    v.append(values)
-                else:
-                    self[key] = values
-
-        except Exception as e:
-            raise RuntimeError('Failed to create {} for {}: {}'.format(RowLookup.__name__,
-                                                                       _tu.to_repr(table_path), str(e)))
-
-    def get_fieldvalue(self, key, field, default=None):
+    def get_value(self, key, field, default=None):
         """
-        Looks up a value by key for a specific field name.
+        Looks up a value by key for one specific field.
         This function can be convenient when only a single value needs to be retrieved from the lookup.
+        The difference with the built-in :func:`get` method is, that the :func:`get_value` function
+        returns a single value, whereas the other one returns a list or tuple of values (i.e. row).
 
         Example:
 
@@ -309,7 +417,7 @@ class RowLookup(_BaseLookup):
             'ThisIsTheValueOfField1'
 
             >>> # Approach using the get_fieldvalue() function:
-            >>> print(my_lookup.get_fieldvalue('{628ee94d-2063-47be-b57f-8c2af6345d4e}', 'Field1'))
+            >>> print(my_lookup.get_value('{628ee94d-2063-47be-b57f-8c2af6345d4e}', 'Field1'))
             'ThisIsTheValueOfField1'
 
         :param key:     Key to find in the lookup dictionary.
@@ -330,18 +438,28 @@ class NodeSet(set):
     Builds a set of unique node keys for coordinates in a feature class.
     The :func:`get_nodekey` function will be used to generate the coordinate hash.
 
+    The ``NodeSet`` inherits all methods from the built-in Python ``set``.
+
     For feature classes with a geometry type other than Point, a NodeSet will be built from the first and last
     points in a geometry. If this is not desired (i.e. all coordinates should be included), the user should set
     the *all_vertices* option to ``True``.
     An exception to this behavior is the Multipoint geometry: for this type, all coordinates will always be included.
 
-    :param fc_path:         The full path to the feature class.
-    :param where_clause:    An optional where clause to filter the feature class.
-    :param all_vertices:    Defaults to ``False``. When set to ``True``, all geometry coordinates are included.
-                            Otherwise, only the first and/or last points are considered.
-    :type fc_path:          str, unicode
-    :type where_clause:     str, unicode, ~gpf.tools.queries.Where
-    :type all_vertices:     bool
+    **Params:**
+
+    -   **fc_path** (str, unicode):
+
+        The full path to the feature class.
+
+    -   **where_clause** (str, unicode, gpf.tools.queries.Where):
+
+        An optional where clause to filter the feature class.
+
+    -   **all_vertices** (bool):
+
+        Defaults to ``False``. When set to ``True``, all geometry coordinates are included.
+        Otherwise, only the first and/or last points are considered.
+
     :raises ValueError:     If the input dataset is not a feature class or if the geometry type is MultiPatch.
     """
 
