@@ -28,7 +28,7 @@ from gpf import arcpy as _arcpy
 
 
 class DescribeWarning(RuntimeWarning):
-    """ The warning type that is shown when ArcPy's :func:`~arcpy.Describe` failed. """
+    """ The warning type that is shown when ArcPy's :func:`arcpy.Describe` failed. """
     pass
 
 
@@ -37,7 +37,7 @@ class Describe(object):
     """
     Wrapper class for the ArcPy ``Describe`` object that exposes the most commonly used properties.
 
-    If ArcPy's :func:`~arcpy.Describe` failed, a warning will be shown but no errors will be (re)raised.
+    If ArcPy's :func:`arcpy.Describe` failed, a warning will be shown but no errors will be (re)raised.
     Any ``Describe`` property that is retrieved, will return ``None`` in this case.
 
     If a property does not exist, it will also return ``None``. If this is not desired,
@@ -115,7 +115,7 @@ class Describe(object):
         If the current ``Describe`` object does not support this action or does not have any rows, 0 will be returned.
 
         :param where_clause:    An optional where clause to base the row count on.
-        :type where_clause:     str, unicode, ~gpf.tools.queries.Where
+        :type where_clause:     str, unicode, gpf.tools.queries.Where
         :rtype:                 int
         """
         field = None
@@ -233,7 +233,7 @@ class Describe(object):
         Returns an ``Extent`` object for this ``Describe`` element.
         If the described object is not a feature class, this will return an empty ``Extent``.
 
-        :rtype: ~arcpy.Extent
+        :rtype: arcpy.Extent
         """
         return self._get(Describe._ATTR_EXTENT) or _arcpy.Extent()
 
@@ -243,7 +243,7 @@ class Describe(object):
         Returns a ``SpatialReference`` object for this ``Describe`` element.
         If the described object is not a feature class, this will return an empty ``SpatialReference``.
 
-        :rtype: ~arcpy.SpatialReference
+        :rtype: arcpy.SpatialReference
         """
         return self._get(Describe._ATTR_SPATREF) or _arcpy.SpatialReference()
 

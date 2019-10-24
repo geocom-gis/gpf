@@ -197,7 +197,7 @@ class Path(object):
 
     .. note::       In Python 3 (``gpf3`` package), this class shadows the built-in ``pathlib.Path`` class.
 
-    .. seealso::    For Esri Geodatabase paths, use the :class:`~gpf.paths.Workspace` class.
+    .. seealso::    For Esri Geodatabase paths, use the :class:`gpf.paths.Workspace` class.
     """
 
     def __init__(self, path, base=None):

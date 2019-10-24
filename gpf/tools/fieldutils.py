@@ -17,8 +17,8 @@
 """
 The *fields* module contains helper functions related to working with Esri Fields (GIS attributes).
 
-.. seealso::    The :class:`~gpf.tools.metadata.Describe` class has a :func:`~gpf.tools.metadata.Describe.get_fields`
-                and a :func:`~gpf.tools.metadata.Describe.get_editable_fields` function, which might also be helpful.
+.. seealso::    The :class:`gpf.tools.metadata.Describe` class has a :func:`gpf.tools.metadata.Describe.get_fields`
+                and a :func:`gpf.tools.metadata.Describe.get_editable_fields` function, which might also be helpful.
 """
 
 import gpf.common.const as _const

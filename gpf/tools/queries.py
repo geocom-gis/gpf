@@ -78,7 +78,7 @@ class Where(object):
                         Multiple values and iterables will all be flattened (one level), sorted and de-duped.
                         For the *is null* and *is not null* operators, values will be ignored.
                         For all operators except *(not) between* and *(not) in*, only the first value will be used.
-    :type where_field:  str, unicode, ~gpf.tools.queries.Where
+    :type where_field:  str, unicode, gpf.tools.queries.Where
     :type operator:     str, unicode
     """
 
@@ -127,7 +127,7 @@ class Where(object):
 
         :param other:   Another ``Where`` instance.
         :return:        The combined new ``Where`` instance.
-        :rtype:         ~gpf.tools.queries.Where
+        :rtype:         gpf.tools.queries.Where
         """
         return self._combine(self.__SQL_OR, other)
 
@@ -142,7 +142,7 @@ class Where(object):
 
         :param other:   Another ``Where`` instance.
         :return:        The combined new ``Where`` instance.
-        :rtype:         ~gpf.tools.queries.Where
+        :rtype:         gpf.tools.queries.Where
         """
         return self._combine(self.__SQL_AND, other)
 
@@ -249,7 +249,7 @@ class Where(object):
         :param operator:    The operator to use (AND/OR).
         :param where:       Another Where instance.
         :return:            The combined new Where instance.
-        :rtype:             ~gpf.tools.queries.Where
+        :rtype:             gpf.tools.queries.Where
         """
         _vld.pass_if(isinstance(where, self.__class__), TypeError, '{!r} is not a valid Where instance'.format(where))
 

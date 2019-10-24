@@ -191,7 +191,7 @@ class Editor(_arcpy.da.Editor):
     However, one can also instantiate the Editor and call :func:`start` and :func:`stop` respectively when done.
 
     :param path:        A path on which to open the edit session. This can be a table or feature class path,
-                        a workspace path or a class:`~gpf.paths.Workspace` instance.
+                        a workspace path or a class:`gpf.paths.Workspace` instance.
     :param with_undo:   If ``True`` (default = ``False``), an undo stack will be kept.
                         For versioned workspaces, this setting has no effect (always ``True``).
                         For all other workspaces, having this value set to ``False`` improves performance.

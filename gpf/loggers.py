@@ -55,12 +55,12 @@ class _FileLogHandler(_handlers.RotatingFileHandler):
 
     By default, the preferred system encoding is used (often set to CP1252 or UTF-8).
 
-    When a :class:`~gpf.loggers.Logger` or :class:`~gpf.loggers.ArcLogger` is set up with this
+    When a :class:`gpf.loggers.Logger` or :class:`gpf.loggers.ArcLogger` is set up with this
     file handler, new logger instances (e.g. in other modules or script) will use the same file handler if
     these loggers are initialized using the same *filename*.
 
     :param filename:    Log file name or absolute or relative path to the log file.
-                        For more information, look at the :class:`~gpf.loggers.Logger` documentation.
+                        For more information, look at the :class:`gpf.loggers.Logger` documentation.
     :param time_tag:    If set to ``True`` (default), a _YYMMDD_HHMMSS timestamp will be appended to *filename*.
                         When set to ``False``, *filename* will not receive a timestamp.
     :param encoding:    The optional encoding to use for the output file. Defaults to the preferred system encoding.
@@ -237,7 +237,7 @@ class _ArcLogHandler(_logging.StreamHandler):
 
 class _FileLogFormatter(_logging.Formatter):
     """
-    Custom log file formatter used by the :class:`~gpf.loggers._FileLogHandler`.
+    Custom log file formatter used by the :class:`gpf.loggers._FileLogHandler`.
 
     This formatter returns a record as **[DD.MM.YYYY | HH:mm:SS | level name | log name] message**.
 
@@ -267,7 +267,7 @@ class _FileLogFormatter(_logging.Formatter):
 
 class _StreamFormatter(_logging.Formatter):
     """
-    Custom log stream formatter used by the :class:`~gpf.loggers._ArcLogHandler`.
+    Custom log stream formatter used by the :class:`gpf.loggers._ArcLogHandler`.
 
     This formatter only logs a message, prepended by a level name if it's a WARNING (or higher).
     """
@@ -314,7 +314,7 @@ class Logger(object):
     :keyword encoding:  The encoding to use in log **files**. Defaults to the preferred system encoding.
     :keyword time_tag:  When set to ``True`` (default), a timestamp will be appended to the log file name.
     :type identity:     str, unicode
-    :type log_file:     str, unicode, :class:`~gpf.paths.Path`
+    :type log_file:     str, unicode, :class:`gpf.paths.Path`
     :type level:        int
     :type encoding:     str
     :type time_tag:     bool
