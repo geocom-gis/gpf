@@ -343,6 +343,12 @@ class SearchCursor(_arcpy.da.SearchCursor):
         """ Resets the cursor position to the first row so it can be iterated over again. """
         return super(SearchCursor, self).reset()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return
+
 
 # noinspection PyPep8Naming
 class InsertCursor(_arcpy.da.InsertCursor):
@@ -423,6 +429,9 @@ class InsertCursor(_arcpy.da.InsertCursor):
     def _close(self, save):
         if self._editor:
             self._editor.stop(save)
+
+    def __enter__(self):
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._close(False if exc_type else True)
@@ -516,6 +525,9 @@ class UpdateCursor(_arcpy.da.UpdateCursor):
         if self._editor:
             self._editor.stop(save)
             self._editor = None
+
+    def __enter__(self):
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._close(False if exc_type else True)
