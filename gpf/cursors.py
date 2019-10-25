@@ -127,13 +127,16 @@ class _Row(object):
         """
         return {k: self[i] for k, i in self._fieldmap.iteritems()}
 
+    def __dir__(self):
+        return [self.getValue.__name__, self.isNull.__name__, self.asDict.__name__]
+
 
 # noinspection PyPep8Naming
 class _MutableRow(_Row):
     """
     _MutableRow(field_map, {default})
 
-    Wrapper class for backward compatibility to fetch values from a mutable row using legacy Esri cursor style.
+    Wrapper class for backwards compatibility to fetch values from a mutable row using legacy Esri cursor style.
 
     This class is only intended for use by an``InsertCursor`` or ``UpdateCursor``.
     """
@@ -174,6 +177,9 @@ class _MutableRow(_Row):
         """
 
         self.setValue(field, None)
+
+    def __dir__(self):
+        return super(_MutableRow, self).__dir__() + [self.setValue.__name__, self.setNull.__name__]
 
 
 # noinspection PyPep8Naming, PyUnusedLocal
