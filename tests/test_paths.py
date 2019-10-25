@@ -168,3 +168,15 @@ def test_workspace_gdb():
     assert paths.Workspace.get_root('C:\\temp\\test.shp') == 'C:\\temp'
     assert paths.Workspace.get_parent('C:\\temp\\test.shp') == 'C:\\temp'
     assert ws.get_root('C:\\temp\\test.gdb\\ele\\ele_kabel') == 'C:\\temp\\test.gdb'
+
+
+def test_workspace_mem():
+    ws = paths.Workspace('in_memory')
+    assert ws.root == paths.Workspace('in_memory')
+    assert ws.qualifier == ''
+    assert ws.separator == ''
+    assert ws.make_path('ele', 'ele_kabel') == 'in_memory\\ele\\ele_kabel'
+    assert paths.Workspace.get_parent(str(ws)) == 'in_memory'
+    assert paths.Workspace.get_parent(str(ws), True) == 'in_memory'
+    assert ws.get_root(str(ws)) == 'in_memory'
+    assert ws.is_gdb is True

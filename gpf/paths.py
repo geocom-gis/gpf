@@ -38,6 +38,8 @@ ESRI_GDB_EXTENSIONS = (
 _ARG_SEP = 'separator'
 _ARG_QF = 'qualifier'
 
+IN_MEMORY_WORKSPACE = 'in_memory'
+
 
 def explode(path):
     """
@@ -391,6 +393,8 @@ def is_gdbpath(path):
     :param path:    The path to verify.
     :rtype:         bool
     """
+    if path.lower() == IN_MEMORY_WORKSPACE:
+        return True
     path = get_abs(path).lower()
     hits = 0
     for ext in ESRI_GDB_EXTENSIONS:
@@ -489,11 +493,13 @@ def unqualify(element):
 
 class Workspace(Path):
     """
-    Workspace(path, {qualifier=''}, {base=None}, {separator='.'})
+    Workspace({path='in_memory', {qualifier=''}, {base=None}, {separator='.'})
 
     Helper class to generate fully qualified paths for elements (tables, feature datasets etc.) in an Esri workspace.
     An Esri Workspace can be anything ranging from an SDE connection file to a File Geodatabase folder or a simple
     directory containing Shapefiles.
+
+    **If ``Workspace`` is initialized without parameters, an in-memory workspace is assumed.**
 
     Please note that the specified *workspace* is never explicitly checked for existence.
     If the user wants to validate the path, use the :func:`exists`, :func:`is_file` or :func:`is_dir` properties.
@@ -508,6 +514,7 @@ class Workspace(Path):
     -   **path** (str, unicode):
 
         The workspace path (e.g. File Geodatabase, SDE connection file) or name.
+        Leave empty if you wish to use an in-memory workspace.
 
     -   **qualifier** (str, unicode):
 
@@ -528,9 +535,11 @@ class Workspace(Path):
 
     :raises ValueError: If *qualifier* has not been set and the workspace is an existing remote database
                         for which the properties cannot be retrieved, initialization will fail.
+
+    .. seealso::        https://desktop.arcgis.com/en/arcmap/latest/analyze/modelbuilder/the-in-memory-workspace.htm
     """
 
-    def __init__(self, path, qualifier=_const.CHAR_EMPTY, base=None, **kwargs):
+    def __init__(self, path=IN_MEMORY_WORKSPACE, qualifier=_const.CHAR_EMPTY, base=None, **kwargs):
         super(Workspace, self).__init__(path, base)
         self._is_remote = self.get_root(self._path.lower()).endswith(_const.EXT_ESRI_SDE)
         self._sep = kwargs.get(_ARG_SEP, _const.CHAR_DOT)
@@ -598,8 +607,8 @@ class Workspace(Path):
 
     @staticmethod
     def _is_gdb_root(path):
-        # Returns True if path ends with an Esri geodatabase extension.
-        return path.lower().endswith(ESRI_GDB_EXTENSIONS)
+        # Returns True if path ends with an Esri geodatabase extension or if path is in-memory.
+        return path.lower().endswith(ESRI_GDB_EXTENSIONS) or path.lower() == IN_MEMORY_WORKSPACE
 
     @classmethod
     def get_parent(cls, path, outside_gdb=False):
@@ -628,6 +637,8 @@ class Workspace(Path):
             >>> Workspace.get_parent(r'C:/temp/test.shp')
             'C:\\temp'
         """
+        if path.lower() == IN_MEMORY_WORKSPACE:
+            return path
         parent_dir = _os.path.normpath(_os.path.dirname(path))
         if outside_gdb or not is_gdbpath(path):
             return parent_dir
@@ -638,9 +649,11 @@ class Workspace(Path):
         """
         Class method that extracts the root workspace for a given Esri table/feature class path.
 
-        A root workspace is the Esri workspace of the "highest order". For an SDE feature class, this is the SDE
-        connection file, for a File Geodatabase table, this is the File Geodatabase directory (.gdb) itself.
+        A root workspace is the Esri workspace of the "highest order".
+        For an SDE feature class, this is the SDE connection file.
+        For a File Geodatabase table, this is the File Geodatabase directory (.gdb) itself.
         For a Shapefile path, this will return the parent directory.
+        For an in memory workspace, this will return 'in_memory'.
 
         :param path:    Full path to an Esri table, feature class or feature dataset.
         :type path:     str, unicode
