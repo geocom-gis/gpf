@@ -437,6 +437,8 @@ class NodeSet(set):
     """
     Builds a set of unique node keys for coordinates in a feature class.
     The :func:`get_nodekey` function will be used to generate the coordinate hash.
+    When the feature class is Z aware, the node keys will be 3D as well.
+    Note that in all cases, M will be ignored.
 
     The ``NodeSet`` inherits all methods from the built-in Python ``set``.
 
@@ -516,3 +518,34 @@ class NodeSet(set):
                 # When *all_vertices* is False (or the geometry is not a Multipoint), only get the start/end nodes
                 self.add(get_nodekey(shape.firstPoint))
                 self.add(get_nodekey(shape.lastPoint))
+
+
+class ValueSet(frozenset):
+    """
+    Builds a set of unique values for a single column in a feature class or table.
+    This class inherits all methods from the built-in Python ``frozenset``.
+
+    **Params:**
+
+    -   **table_path** (str, unicode):
+
+        The full path to the table or feature class.
+
+    -   **field** (str, unicode):
+
+        The field name for which to collect a set of unique values.
+
+    -   **where_clause** (str, unicode, gpf.tools.queries.Where):
+
+        An optional where clause to filter the feature class.
+    """
+
+    def __new__(cls, table_path, field, where_clause=None):
+        # Populate the frozenset
+        with _cursors.SearchCursor(table_path, field, where_clause) as rows:
+            return super(ValueSet, cls).__new__(cls, (value for value, in rows))
+
+    # noinspection PyMissingConstructor, PyUnusedLocal
+    def __init__(self, table_path, field, where_clause=None):
+        # This override is only required for type hint purposes and to match __new__'s signature
+        pass
