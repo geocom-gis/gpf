@@ -57,7 +57,7 @@ def explode(path):
         >>> explode(r'C:/temp/folder')
         ('C:\\temp', 'folder', '')
     """
-    _vld.pass_if(isinstance(path, basestring), TypeError, 'path attribute must be a string')
+    _vld.pass_if(isinstance(path, basestring), TypeError, 'Path attribute must be a string')
 
     head, tail = _os.path.split(_os.path.normpath(path))
     name, ext = _os.path.splitext(tail)
@@ -75,7 +75,7 @@ def normalize(path, lowercase=True):
     :type lowercase:    bool
     :rtype:             str, unicode
     """
-    _vld.pass_if(isinstance(path, basestring), TypeError, 'path attribute must be a string')
+    _vld.pass_if(isinstance(path, basestring), TypeError, 'Path attribute must be a string')
 
     norm_path = _os.path.normpath(path)
     return norm_path.lower() if lowercase else norm_path
@@ -89,7 +89,7 @@ def concat(*args):
     :type args:     str, unicode
     :rtype:         str, unicode
     """
-    _vld.pass_if(args and all(isinstance(a, basestring) for a in args), TypeError, 'all arguments must be strings')
+    _vld.pass_if(args and all(isinstance(a, basestring) for a in args), TypeError, 'All arguments must be strings')
 
     return normalize(_os.path.join(*args), False)
 

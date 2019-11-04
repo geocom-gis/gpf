@@ -63,7 +63,7 @@ def get_nodekey(*args):
         >>> key = key(*coord)
         >>> print(key)
         (42451, 232454)
-        >>> coord_lookup.get(get_nodekey)
+        >>> coord_lookup.get(key)
         '{628ee94d-2063-47be-b57f-8c2af6345d4e}'
 
     :param args:    A minimum of 2 numeric values, an EsriJSON dictionary, an ArcPy Point or PointGeometry instance.
@@ -217,10 +217,11 @@ class Lookup(dict):
             row_func = kwargs.get(_ROWFUNC_ARG, self._process_row)
             has_self = self._has_self(row_func)
 
-            for row in _cursors.SearchCursor(table_path, fields, where_clause):
-                failed = row_func(row, **kwargs) if has_self else row_func(self, row, **kwargs)
-                if failed:
-                    raise Exception(failed)
+            with _cursors.SearchCursor(table_path, fields, where_clause) as rows:
+                for row in rows:
+                    failed = row_func(row, **kwargs) if has_self else row_func(self, row, **kwargs)
+                    if failed:
+                        raise Exception(failed)
 
         except Exception as e:
             raise RuntimeError('Failed to create {} for {}: {}'.format(self.__class__.__name__,
@@ -283,7 +284,7 @@ class ValueLookup(Lookup):
                       '{} expects a single value field: use {} instead'.format(ValueLookup.__name__,
                                                                                RowLookup.__name__))
         _vld.pass_if(all(_vld.has_value(v) for v in (table_path, key_field, value_field)), ValueError,
-                     '{} requires valid table_path, key_field and value_field arguments')
+                     '{} requires valid table_path, key_field and value_field arguments'.format(ValueLookup.__name__))
 
         # User cannot override row processor function for this class
         if _ROWFUNC_ARG in kwargs:
@@ -416,7 +417,7 @@ class RowLookup(Lookup):
             >>>     print(field1)
             'ThisIsTheValueOfField1'
 
-            >>> # Approach using the get_fieldvalue() function:
+            >>> # Approach using the get_value() function:
             >>> print(my_lookup.get_value('{628ee94d-2063-47be-b57f-8c2af6345d4e}', 'Field1'))
             'ThisIsTheValueOfField1'
 

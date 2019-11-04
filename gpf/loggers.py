@@ -242,7 +242,7 @@ class _FileLogFormatter(_logging.Formatter):
     This formatter returns a record as **[DD.MM.YYYY | HH:mm:SS | level name | log name] message**.
 
     By default, the length of the *log name* will be limited to 15 characters.
-    If this should be changed, the Formatter can be initialized using a different *max_name*.
+    If this should be changed, the :class`Logger` can be initialized using a different *max_name*.
 
     :param logname_length:  The maximum length of the log name in the formatted record.
     :type logname_length:   int
