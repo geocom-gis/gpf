@@ -191,7 +191,7 @@ def signature_matches(func, template_func):
     return f_args == t_args
 
 
-def pass_if(expression, exc_type, exc_val=''):
+def pass_if(expression, exc_type, exc_val=_const.CHAR_EMPTY):
     """
     Raises an error of type *err_type* when *expression* is **falsy** and silently passes otherwise.
     Opposite of :func:`raise_if`.
@@ -220,7 +220,7 @@ def pass_if(expression, exc_type, exc_val=''):
     return True
 
 
-def raise_if(expression, exc_type, exc_val=''):
+def raise_if(expression, exc_type, exc_val=_const.CHAR_EMPTY):
     """
     Raises an error of type *err_type* when *expression* is **truthy** and silently passes otherwise.
     Opposite of :func:`pass_if`.
