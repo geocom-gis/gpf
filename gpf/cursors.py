@@ -68,11 +68,12 @@ class _Row(object):
     :type default:      type
     """
 
-    __slots__ = '_fieldmap', '_data'
+    __slots__ = '_fieldmap', '_data', '_repr'
 
     def __init__(self, field_map, **kwargs):
         self._fieldmap = field_map
         self._data = kwargs.get('default', _default_tuple(len(field_map)))
+        self._repr = '([])'
 
     def __iter__(self):
         return iter(self._data)
@@ -81,7 +82,7 @@ class _Row(object):
         return self._data[item]
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__, _const.TEXT_COMMASPACE.join(_tu.to_repr(v) for v in self._data))
+        return self._repr.format(_const.TEXT_COMMASPACE.join(_tu.to_repr(v) for v in self._data))
 
     def __getslice__(self, i, j):
         return self._data[i:j]
@@ -94,7 +95,7 @@ class _Row(object):
         """
         Returns the value that matches the given *field* name for the current row.
 
-        A *default* can be be specified in case the value was not found.
+        A *default* can be specified in case the value was not found.
 
         :param field:       The (case-insensitive) name of the field for which to retrieve the value.
         :param default:     The default value to return in case the field was not found.
@@ -127,9 +128,6 @@ class _Row(object):
         """
         return {k: self[i] for k, i in self._fieldmap.iteritems()}
 
-    def __dir__(self):
-        return [self.getValue.__name__, self.isNull.__name__, self.asDict.__name__]
-
 
 # noinspection PyPep8Naming
 class _MutableRow(_Row):
@@ -143,6 +141,7 @@ class _MutableRow(_Row):
 
     def __init__(self, field_map):
         super(_MutableRow, self).__init__(field_map, default=_default_list(len(field_map)))
+        self._repr = '[{}]'
 
     def __call__(self, row=None):
         self._data = _default_list(len(self._fieldmap)) if row is None else row
@@ -177,9 +176,6 @@ class _MutableRow(_Row):
         """
 
         self.setValue(field, None)
-
-    def __dir__(self):
-        return super(_MutableRow, self).__dir__() + [self.setValue.__name__, self.setNull.__name__]
 
 
 # noinspection PyPep8Naming, PyUnusedLocal
