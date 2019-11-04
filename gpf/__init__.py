@@ -34,7 +34,7 @@ with this package without any problems.
 
 import sys as _sys
 
-from common import const as _const
+from gpf.common import const as _const
 
 _NOT_INITIALIZED = 'NotInitialized'
 
