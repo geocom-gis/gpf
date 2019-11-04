@@ -42,7 +42,13 @@ FIELDTYPE_MAPPING = {
 
 
 def clone_field(field):
-    """ Returns a deep copy (clone) of a Field object. """
+    """
+    Returns a deep copy (clone) of a Field object.
+
+    :param field:       The Field instance that should be cloned.
+    :type field:        arcpy.Field
+    :rtype: arcpy.Field
+    """
     new_field = _arcpy.Field()
     for attr in (f for f in dir(field) if not f.startswith(_const.CHAR_UNDERSCORE)):
         value = getattr(field, attr)
