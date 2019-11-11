@@ -18,58 +18,63 @@
 Module that facilitates working with basic SQL expressions and where clauses in ArcGIS.
 """
 
+from functools import wraps as _wraps
+
 import gpf.common.guids as _guids
 import gpf.common.iterutils as _iter
 import gpf.common.textutils as _tu
 import gpf.common.validate as _vld
 import gpf.common.const as _const
+from gpf.paths import Workspace as _Ws
 from gpf import arcpy as _arcpy
 
 WHERE_KWARG = 'where_clause'
-_CHECK_ARG = 'check_only'
 
 
-# Wrappers for handled exceptions
-class OperatorError(TypeError):
-    """ Raised when an incorrect SQL operator is specified in a :class:`Where` instance. """
-    pass
+def _return_new(func):
+    """ Decorator function to execute instance method *func* on a new copy of the original instance. """
+    @_wraps(func)
+    def wrapped(instance, *args, **kwargs):
+        cls = instance.__class__
+        new_instance = cls(instance)
+        func(new_instance, *args, **kwargs)
+        return new_instance
+    return wrapped
 
 
-class InitError(TypeError):
-    """ Raised when a :class:`Where` instance failed to initialize (i.e. because of bad arguments). """
-    pass
-
-
+# noinspection PyPep8Naming
 class Where(object):
     """
-    Where(where_field, {operator}, {values})
+    Where(field_or_clause)
 
     Basic query helper class to build basic SQL expressions for ArcPy tools where clauses.
-    Using the ``&`` and ``|`` bitwise operators, a user can "daisy chain" multiple statements.
+    Because all methods return a new instance, the user can "daisy chain" multiple statements.
+
     When used in combination with the :py:mod:`gpf.cursors` module, the Where clause can be passed-in directly.
-    In other cases (e.g. *arcpy* tools), the resulting SQL expression is obtained using ``str()`` or ``repr()``.
+    In other cases (e.g. *arcpy* tools), the resulting SQL expression is obtained using :func:`str` or :func:`repr`.
+    The latter does not check if the resulting expression is a complete SQL query.
 
     Example of a simple query:
 
-        >>> Where('A', '>=', 3.14)
+        >>> Where('A').GreaterThanOrEquals(3.14)
         A >= 3.14
 
-    The *(NOT) IN* operator accepts multiple arguments or an iterable as input.
+    The :func:`In` and :func:`NotIn` functions accept multiple arguments or an iterable as input.
     The following example shows how boolean values are interpreted as integers and that duplicates are removed:
 
-        >>> Where('A', 'not in', [1, 2, True, False, 3])
+        >>> Where('A').NotIn(1, 2, True, False, 3)
         A NOT IN (0, 1, 2, 3)
 
-    The *(NOT) BETWEEN* operator also accepts an iterable as input.
-    The resulting SQL expression will only use the lower and upper bounds of the list,
+    The :func:`Between` and :func:`NotBetween` functions also accept multiple arguments or an iterable as input.
+    The resulting SQL expression will only use the lower and upper values of the input list,
     as shown in the following composite query example:
 
-        >>> Where('A', 'like', 'Test%') | Where('B', 'between', [8, 5, 3, 4])
+        >>> Where('A').Like('Test%').Or('B').Between([8, 5, 3, 4])
         A LIKE 'Test%' OR B BETWEEN 3 AND 8
 
-    The following example demonstrates how you can make a grouped composite query using ``Where`` as a wrapper:
+    The following example demonstrates how you can make a grouped composite query using the :func:`combine` function:
 
-        >>> Where(Where('A', '=', 1) & Where('B', '=', 0)) | Where('C', 'is null')
+        >>> combine(Where('A').Equals(1).And('B').Equals(0)).Or('C').IsNull()
         (A = 1 AND B = 0) OR C IS NULL
 
     **Params:**
@@ -78,98 +83,357 @@ class Where(object):
 
         The initial field to start the where clause, or another `Where` instance.
 
-    -   **operator** (str, unicode):
+    -   **encoding** (str):
 
-        Operator string (e.g. *between*, *in*, *<*, *=*, *is null*, etc.).
-
-    -   **values**:
-
-        The conditional values that must be met for the specified field and operator.
-        Multiple values and iterables will all be flattened (one level), sorted and de-duped.
-        For the *is null* and *is not null* operators, values will be ignored.
-        For all operators except *(not) between* and *(not) in*, only the first value will be used.
+        An optional character encoding (default = 'utf-8') which will be used to encode all incoming string values.
     """
 
     # Private class constants
-    __SQL_OR = _const.TEXT_OR
-    __SQL_AND = _const.TEXT_AND
-    __SQL_IN = 'in'
-    __SQL_NOT_IN = 'not in'
-    __SQL_NULL = 'is null'
-    __SQL_NOT_NULL = 'is not null'
-    __SQL_LIKE = 'like'
-    __SQL_NOT_LIKE = 'not like'
-    __SQL_BETWEEN = 'between'
-    __SQL_NOT_BETWEEN = 'not between'
+    __SQL_OR = unicode(_const.TEXT_OR.upper())
+    __SQL_AND = unicode(_const.TEXT_AND.upper())
+    __SQL_NOT = u'NOT'
+    __SQL_IS = u'IS'
+    __SQL_IN = u'IN'
+    __SQL_NULL = u'NULL'
+    __SQL_LIKE = u'LIKE'
+    __SQL_BETWEEN = u'BETWEEN'
+    __SQL_ESCAPE = u'ESCAPE'
+    __SQL_EQ = u'='
+    __SQL_LE = u'<='
+    __SQL_GE = u'>='
+    __SQL_LT = u'<'
+    __SQL_GT = u'>'
+    __SQL_NE = u'<>'
 
-    __SUPPORTED_OPERATORS = frozenset((
-        '=', '<>', '!=', '<=', '>=', '<', '>',
-        __SQL_NULL, __SQL_NOT_NULL, __SQL_IN, __SQL_NOT_IN,
-        __SQL_LIKE, __SQL_NOT_LIKE, __SQL_BETWEEN, __SQL_NOT_BETWEEN
-    ))
-
-    def __init__(self, where_field, operator=None, *values):
-
-        self._locked = False
-        self._fields = {}
+    def __init__(self, field_or_clause, encoding=_const.ENC_UTF8):
+        self._enc = encoding
         self._parts = []
-        if _vld.is_text(where_field, False) and operator:
-            self._fields.setdefault(where_field.lower(), [0])
-            self._parts.append(where_field)
-            self._add_expression(operator, *values)
-        elif isinstance(where_field, self.__class__):
-            # When `where_field` is another Where instance, simply wrap its contents in parentheses
-            self._update_fieldmap(where_field._fields, 1)
-            self._parts = ['('] + where_field._parts + [')']
-        elif where_field is not None:
-            raise InitError('{0} expects a field name and an operator, or another {0} instance'.format(Where.__name__))
-
-    def __or__(self, other):
-        """
-        Override method of the bitwise OR operator `|` to combine the current SQL field expression with another one.
-
-        Example:
-
-            >>> Where('A', '>', 0) | Where('B', '=', 'example')
-            A > 0 OR B = 'example'
-
-        :param other:   Another ``Where`` instance.
-        :return:        The combined new ``Where`` instance.
-        :rtype:         gpf.tools.queries.Where
-        """
-        return self._combine(self.__SQL_OR, other)
-
-    def __and__(self, other):
-        """
-        Override method of the bitwise AND operator `&` to combine the current SQL field expression with another one.
-
-        Example:
-
-            >>> Where('A', '>', 0) & Where('B', '=', 'example')
-            A > 0 AND B = 'example'
-
-        :param other:   Another ``Where`` instance.
-        :return:        The combined new ``Where`` instance.
-        :rtype:         gpf.tools.queries.Where
-        """
-        return self._combine(self.__SQL_AND, other)
+        self._isdirty = False
+        self._add_new(field_or_clause)
 
     def __repr__(self):
         """
         Returns the where clause SQL string representation of this Where instance.
-        Note that str() and repr() will all return this string when called on the instance.
+        Note that str() and repr() will both return the same string when called on the instance.
+        However, repr() does not check if the constructed query is valid.
 
         :return:    A where clause SQL expression string.
+        :rtype:     unicode
         """
         return self._output()
+
+    def __str__(self):
+        """
+        Returns the where clause SQL encoded string representation of this Where instance.
+
+        :return:            A where clause SQL expression string.
+        :rtype:             str
+        :raises ValueError: If the query has not been finished properly.
+        """
+        return self._output(True).encode(self._enc)
+
+    def __unicode__(self):
+        """
+        Returns the where clause SQL unicode representation of this Where instance.
+
+        :return:            A where clause SQL expression string.
+        :rtype:             unicode
+        :raises ValueError: If the query has not been finished properly.
+        """
+        return self._output(True)
 
     def __eq__(self, other):
         """ Returns ``True`` when the other object is of the same type and/or represents the same SQL expression. """
         if isinstance(other, basestring):
             return repr(self) == other
-        elif isinstance(other, self.__class__):
+        elif isinstance(other, Where):
             return repr(self) == repr(other)
         return False
+
+    def _add_any(self, value, is_field=False, is_conjunction=False):
+        """ Generic method to add a new part (field name, operator, or value) to the current query. """
+        if (is_field or is_conjunction) == self._isdirty:
+            raise SyntaxError('Adding {} would create an invalid query'.format(_tu.to_repr(value, self._enc)))
+        self._parts.append((value, is_field))
+
+    def _add_expression(self, *values):
+        """ Adds an expression (consisting of multiple parts) to the current query. """
+        for v in values:
+            self._add_any(v)
+        self._isdirty = False
+
+    def _add_field(self, field):
+        """  Adds a field to the query (combine or init). """
+        self._add_any(_tu.to_unicode(field, self._enc), True)
+        self._isdirty = True
+
+    def _add_clause(self, clause):
+        """
+        Adds another clause to the query (combine or init).
+
+        :type clause:   Where
+        """
+        # Copy all parts
+        self._parts.extend(clause._parts)
+
+        # Copy the encoding
+        self._enc = clause._enc
+
+        # Copy the _isdirty state of the input query
+        self._isdirty = clause._isdirty
+
+    def _add_new(self, field_or_clause):
+        """ Adds a new field or a complete clause to the current query. """
+        if isinstance(field_or_clause, Where):
+            # Add a whole Where clause
+            return self._add_clause(field_or_clause)
+
+        if isinstance(field_or_clause, basestring):
+            # Add a new field and set state to dirty
+            return self._add_field(field_or_clause)
+
+        # At this point, the passed-in argument is invalid
+        raise ValueError("'field_or_clause' must be a field name or {} instance".format(self.__class__.__name__))
+
+    def _combine(self, operator, field_or_clause):
+        """ Instructs Where instance to append a new query using the AND or OR conjunction. """
+        self._add_any(operator, is_conjunction=True)
+        self._add_new(field_or_clause)
+
+    def _output(self, check=False):
+        """ Concatenates all query parts to form an actual SQL expression. Can check if the query is dirty. """
+        _vld.raise_if(check and self._isdirty, ValueError, 'Cannot output invalid query')
+        return u"""{}""".format(_const.CHAR_SPACE.join(part for part, _ in self._parts))
+
+    @staticmethod
+    def _check_types(*args):
+        """ Checks that all query values have compatible data types. Applies to IN and BETWEEN operators. """
+        first_val = args[0]
+        first_type = type(first_val)
+        if _vld.is_number(first_val, True):
+            # For now, we will allow a mixture of floats and integers (and bools) in the list of values
+            first_type = (int, float, bool)
+        elif _vld.is_text(first_val):
+            first_type = (str, unicode)
+
+        return all(isinstance(v, first_type) for v in args)
+
+    def _format_value(self, value):
+        """
+        Private method to format *value* for use in an SQL expression based on its type.
+        This basically means that all non-numeric values (strings) will be quoted.
+        If value is a :class:`gpf.common.guids.Guid` instance, the result will be wrapped in curly braces and quoted.
+
+        :param value:   Any value. Single quotes in strings will be escaped automatically.
+        :return:        A formatted string.
+        :rtype:         unicode
+        """
+        if _vld.is_number(value, True):
+            # Note: a `bool` is of instance `int` but calling format() on it will return a string (True or False).
+            # To prevent this from happening, we'll use the `real` numeric part instead (on int, float and bool).
+            return _tu.to_unicode(value.real, self._enc)
+
+        if isinstance(value, _guids.Guid):
+            # Parse Guid instances as strings
+            value = str(value)
+        if _vld.is_text(value):
+            return _tu.to_unicode(_tu.to_repr(value, self._enc), self._enc)
+
+        raise ValueError('All values in an SQL expression must be text strings or numeric values')
+
+    def _check_values(self, values, min_required, operator):
+        """ Flattens the IN/BETWEEN query values, performs several checks, and returns the list if ok. """
+        output = [v for v in _iter.collapse(values, levels=1)]
+        _vld.pass_if(len(output) >= min_required,
+                     ValueError, '{} query requires at least {} value'.format(operator, min_required))
+        _vld.pass_if(self._check_types(*output),
+                     ValueError, '{} query values must have similar data types'.format(operator))
+        return output
+
+    def _in(self, operator, *values):
+        """ Adds an (NOT) IN expression to the SQL query. """
+        flat_values = self._check_values(values, 1, operator)
+        expression = u'({})'.format(
+                _const.TEXT_COMMASPACE.join((self._format_value(v) for v in sorted(frozenset(flat_values)))))
+        self._add_expression(operator, expression)
+
+    def _between(self, operator, *values):
+        """ Adds a (NOT) BETWEEN .. AND .. expression to the SQL query. """
+        flat_values = self._check_values(values, 2, operator)
+        lower, upper = (self._format_value(v) for v in (min(flat_values), max(flat_values)))
+        self._add_expression(operator, lower, self.__SQL_AND, upper)
+
+    def _like(self, operator, value, escape_char):
+        """ Adds a (NOT) LIKE expression to the SQL query. """
+        expression = [self._format_value(value)]
+        if escape_char:
+            expression += [self.__SQL_ESCAPE, self._format_value(escape_char)]
+        self._add_expression(operator, unicode(_const.CHAR_SPACE).join(expression))
+
+    # The following method names do NOT conform to PEP8 conventions.
+    # However, this is done for the sake of consistency and readability,
+    # since some lowercase method names like "and" or "or" would otherwise
+    # conflict with Python's built-in operators.
+    # Furthermore, since all these methods return a new Where instance,
+    # using Pascal case makes it clear that these methods are "special".
+
+    @_return_new
+    def And(self, field_or_clause):
+        """
+        Adds a new field or another SQL query to a new instance of the current SQL query,
+        separated by an "AND" statement and returns it.
+
+        :param field_or_clause:     A field name or another ``Where`` instance.
+        :type field_or_clause:      str, unicode, Where
+        :rtype:                     Where
+        """
+        self._combine(self.__SQL_AND, field_or_clause)
+
+    @_return_new
+    def Or(self, field_or_clause):
+        """
+        Adds a new field or another SQL query to a new instance of the current SQL query,
+        separated by an "OR" statement and returns it.
+
+        :param field_or_clause:     A field name or another ``Where`` instance.
+        :type field_or_clause:      str, unicode, Where
+        :rtype:                     Where
+        """
+        self._combine(self.__SQL_OR, field_or_clause)
+
+    @_return_new
+    def In(self, *values):
+        """
+        Adds an IN expression to a copy of the current instance to complete the SQL query and returns it.
+        The given input values must have similar data types. The values will be ordered and duplicates are removed.
+
+        :rtype: Where
+        """
+        self._in(self.__SQL_IN, *values)
+
+    @_return_new
+    def NotIn(self, *values):
+        """
+        Adds a NOT IN expression to a copy of the current instance to complete the SQL query and returns it.
+        The given input values must have similar data types. The values will be ordered and duplicates are removed.
+
+        :rtype: Where
+        """
+        self._in(self.__SQL_NOT + _const.CHAR_SPACE + self.__SQL_IN, *values)
+
+    @_return_new
+    def Between(self, *values):
+        """
+        Adds a BETWEEN expression to a copy of the current instance to complete the SQL query and returns it.
+        The given input values must have similar data types. Only the lower and upper values are used.
+
+        :rtype: Where
+        """
+        self._between(self.__SQL_BETWEEN, *values)
+
+    @_return_new
+    def NotBetween(self, *values):
+        """
+        Adds a NOT BETWEEN expression to a copy of the current instance to complete the SQL query and returns it.
+        The given input values must have similar data types. Only the lower and upper values are used.
+
+        :rtype: Where
+        """
+        self._between(self.__SQL_NOT + _const.CHAR_SPACE + self.__SQL_BETWEEN, *values)
+
+    @_return_new
+    def Like(self, value, escape_char=None):
+        """
+        Adds a LIKE expression to a copy of the current instance to complete the SQL query and returns it.
+        Optionally, an escape character can be specified e.g. when a % symbol must be taken literally.
+
+        :rtype: Where
+        """
+        self._like(self.__SQL_LIKE, value, escape_char)
+
+    @_return_new
+    def NotLike(self, value, escape_char=None):
+        """
+        Adds a NOT LIKE expression to a copy of the current instance to complete the SQL query and returns it.
+        Optionally, an escape character can be specified e.g. when a % symbol must be taken literally.
+
+        :rtype: Where
+        """
+        self._like(self.__SQL_NOT + _const.CHAR_SPACE + self.__SQL_LIKE, value, escape_char)
+
+    @_return_new
+    def Equals(self, value):
+        """
+        Adds a "=" expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_expression(self.__SQL_EQ, self._format_value(value))
+
+    @_return_new
+    def NotEquals(self, value):
+        """
+        Adds a "<>" expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_expression(self.__SQL_NE, self._format_value(value))
+
+    @_return_new
+    def GreaterThan(self, value):
+        """
+        Adds a ">" expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_expression(self.__SQL_GT, self._format_value(value))
+
+    @_return_new
+    def LessThan(self, value):
+        """
+        Adds a "<" expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_expression(self.__SQL_LT, self._format_value(value))
+
+    @_return_new
+    def GreaterThanOrEquals(self, value):
+        """
+        Adds a ">=" expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_expression(self.__SQL_GE, self._format_value(value))
+
+    @_return_new
+    def LessThanOrEquals(self, value):
+        """
+        Adds a "<=" expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_expression(self.__SQL_LE, self._format_value(value))
+
+    @_return_new
+    def IsNull(self):
+        """
+        Adds a IS NULL expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_any(self.__SQL_IS + _const.CHAR_SPACE + self.__SQL_NULL)
+        self._isdirty = False
+
+    @_return_new
+    def IsNotNull(self):
+        """
+        Adds a IS NOT NULL expression to a copy of the current instance to complete the SQL query and returns it.
+
+        :rtype: Where
+        """
+        self._add_any(unicode(_const.CHAR_SPACE).join((self.__SQL_IS, self.__SQL_NOT, self.__SQL_NULL)))
+        self._isdirty = False
 
     def get_kwargs(self, keyword=WHERE_KWARG, **kwargs):
         """
@@ -183,162 +447,70 @@ class Where(object):
         :return:            A keyword dictionary containing the ``where_clause`` key-value pair.
         :rtype:             dict
         """
-        kwargs[keyword] = self._output()
+        kwargs[keyword] = self._output(True)
         return kwargs
 
-    def fix_fields(self, datasource):
+    def delimit_fields(self, datasource):
         """
         Updates the fields in the query by wrapping them in the appropriate delimiters for the current data source.
 
         :param datasource:  The path to the data source (e.g. SDE connection, feature class, etc.)
+                            or a :class:`gpf.paths.Workspace` instance.
 
         .. seealso::        https://desktop.arcgis.com/en/arcmap/latest/analyze/arcpy-functions/addfielddelimiters.htm
         """
-        for field, indices in self._fields.iteritems():
-            for i in indices:
-                self._parts[i] = _arcpy.AddFieldDelimiters(datasource, field)
+        for i, (part, is_field) in enumerate(self._parts):
+            if not is_field:
+                continue
+            # Call arcpy function on "clean" version of the field name (to prevent adding duplicate delimiters)
+            part = _arcpy.AddFieldDelimiters(
+                    _tu.to_str(datasource) if isinstance(datasource, _Ws) else datasource, part.strip('[]"'))
+            self._parts[i] = (part, is_field)
 
     @property
     def fields(self):
         """
-        Returns a sorted tuple of all fields that currently participate in the ``Where`` clause.
+        Returns a tuple of all fields (in order of occurrence) that currently participate in the ``Where`` clause.
 
         :rtype: tuple
         """
-        return tuple(sorted(self._fields))
+        return tuple(part for part, is_field in self._parts if is_field)
 
-    def _output(self):
-        """
-        Concatenates all query parts to form an actual SQL expression.
+    @property
+    def is_ready(self):
+        """ Returns ``True`` when the query appears to be ready for execution (i.e. has no syntax errors). """
+        return not self._isdirty
 
-        :return:    An SQL expression string for ArcGIS tools.
-        :rtype:     str, unicode
-        """
-        return """{}""".format(_const.CHAR_SPACE.join(self._parts))
 
-    def _add_expression(self, operator, *values):
-        """
-        Private method to properly complete an SQL expression for the initial field.
-        The current internal SQL expression will be permanently changed.
-        Explicit consecutive calls to this function will raise an ``OverflowError``.
+# noinspection PyProtectedMember
+def combine(where_clause):
+    """
+    The `combine` function wraps a :class:`Where` instance in parenthesis "()".
+    This is typically used to combine 2 or more SQL clauses (delimited by AND or OR) into one.
 
-        :param operator:    The operator to use (=, <>, IN etc.).
-        :param values:      The value(s) following the operator.
-        """
-        _vld.raise_if(self._locked, OverflowError, 'Cannot add more than one expression to a field')
+    Example:
 
-        operator = self._fix_operator(operator)
-        is_between = operator.endswith(self.__SQL_BETWEEN)
-        self._parts.append(operator.upper())
+        >>> combine(Where('A').Equals(1).And('B').Equals(0)).Or('C').IsNull()
+        (A = 1 AND B = 0) OR C IS NULL
 
-        if operator not in (self.__SQL_NULL, self.__SQL_NOT_NULL):
-            values = self._fix_values(*values, check_only=is_between)
-            if operator.endswith(self.__SQL_IN):
-                self._parts.append('({})'.format(_const.TEXT_COMMASPACE.join(values)))
-            elif is_between:
-                self._between(operator, *values)
-            else:
-                self._parts.append(_iter.first(values))
+    **Params:**
 
-        self._locked = True
+    -   **where_clause** (:class:`Where`):
 
-    def _update_fieldmap(self, fieldmap, offset):
-        for k, values in fieldmap.iteritems():
-            fp_values = self._fields.setdefault(k, [])
-            for v in values:
-                fp_values.append(v + offset)
+        Another `Where` instance that should be wrapped in parenthesis.
+    """
 
-    # noinspection PyProtectedMember
-    def _combine(self, operator, where):
-        """
-        Private method to append the SQL expression from another Where instance to the current one
-        and return it as a new Where instance.
+    # Check if clause is another Where instance
+    _vld.pass_if(isinstance(where_clause, Where),
+                 ValueError, 'Input clause must be of type {!r}'.format(Where.__name__))
 
-        :param operator:    The operator to use (AND/OR).
-        :param where:       Another Where instance.
-        :return:            The combined new Where instance.
-        :rtype:             gpf.tools.queries.Where
-        """
-        _vld.pass_if(isinstance(where, self.__class__), TypeError, '{!r} is not a valid Where instance'.format(where))
+    # Since we will wrap the query in parenthesis, it must be a complete query (not dirty)
+    _vld.pass_if(where_clause.is_ready, ValueError, 'Cannot wrap incomplete query in parenthesis')
 
-        output = Where(None)
-        output._fields = dict(self._fields)
-        output._parts = list(self._parts)
-        output._update_fieldmap(where._fields, len(where._parts) + 1)
-        output._parts.append(operator.upper())
-        output._parts.extend(where._parts)
-        return output
-
-    @staticmethod
-    def _fix_operator(operator, allowed_operators=__SUPPORTED_OPERATORS):
-        """ Makes *operator* lowercase and checks if it's a valid operator. """
-        operator = operator.strip().lower()
-        _vld.pass_if(operator in allowed_operators, OperatorError,
-                     'The {!r} operator is not allowed or supported'.format(operator))
-        return operator
-
-    def _fix_values(self, *values, **kwargs):
-        """
-        Private method to validate *values* for use in an SQL expression.
-        All values, regardless if they are iterables themselves, will be flattened (up to 1 level).
-        If the values do not have comparable types (i.e. all numeric, all strings), a ``TypeError`` will be raised.
-
-        :param values:          An iterable (of iterables) with values to use for the SQL expression.
-        :keyword check_only:    When False (default=True), values will be sorted and duplicates will be removed.
-                                Furthermore, the returned values will be formatted for the SQL expression.
-                                When True, the values will only be flattened and checked for comparable types.
-        :return:                A generator of checked (and formatted) values.
-        """
-        _vld.pass_if(values, OperatorError, 'Specified {} operator requires at least one value'.format(Where.__name__))
-
-        values = [v for v in _iter.collapse(values, levels=1)]
-        unique_values = frozenset(values)
-        first_val = _iter.first(unique_values)
-
-        if _vld.is_number(first_val, True):
-            # For now, allow a mixture of floats and integers (and bools) in the list of values
-            # TODO: When input field is an arcpy.Field instance, filter by field.type
-            first_type = (int, float, bool)
-        elif _vld.is_text(first_val):
-            first_type = (str, unicode)
-        else:
-            first_type = type(first_val)
-
-        _vld.raise_if(any(not isinstance(v, first_type) for v in unique_values), TypeError,
-                      'All {} values must have the same data type'.format(Where.__name__))
-
-        check_only = kwargs.get(_CHECK_ARG, False)
-        return (v if check_only else self._format_value(v) for v in (values if check_only else sorted(unique_values)))
-
-    def _between(self, operator, *values):
-        """ Adds a BETWEEN .. AND .. expression to the SQL query. """
-        num_values = len(values)
-        _vld.raise_if(num_values < 2, OperatorError,
-                      '{} requires at least 2 values (got {})'.format(operator.upper(), num_values))
-        lower, upper = (self._format_value(v) for v in (min(values), max(values)))
-        self._parts.extend([lower, self.__SQL_AND.upper(), upper])
-
-    @staticmethod
-    def _format_value(value):
-        """
-        Private method to format *value* for use in an SQL expression based on its type.
-        This basically means that all non-numeric values will be quoted.
-        If value is a :class:`gpf.common.guids.Guid` string, the result will be wrapped in curly braces and quoted.
-
-        :param value:   Any value. Single quotes in strings will be escaped automatically.
-        :return:        A formatted string.
-        :rtype:         str, unicode
-        """
-        if _vld.is_number(value, True):
-            # Note: a `bool` is of instance `int` but calling format() on it will return a string (True or False)
-            # To prevent this from happening, we'll use the `real` numeric value instead (on int, float and bool)
-            return format(value.real)
-        elif _vld.is_text(value):
-            try:
-                return repr(str(_guids.Guid(value)))
-            except (_guids.Guid.MissingGuidError, _guids.Guid.BadGuidError):
-                return _tu.to_repr(value)
-        raise TypeError('All values in an SQL expression must be of type str, bool, int or float')
+    wrapper = Where(where_clause)
+    wrapper._parts.insert(0, (u'(', False))
+    wrapper._parts.append((u')', False))
+    return wrapper
 
 
 def add_where(keyword_args, where_clause, datasource=None):
@@ -359,8 +531,8 @@ def add_where(keyword_args, where_clause, datasource=None):
 
     if isinstance(where_clause, Where):
         if datasource:
-            where_clause.fix_fields(datasource)
-        keyword_args[WHERE_KWARG] = str(where_clause)
+            where_clause.delimit_fields(datasource)
+        keyword_args[WHERE_KWARG] = unicode(where_clause)
     elif isinstance(where_clause, (str, unicode)):
         keyword_args[WHERE_KWARG] = where_clause
     else:
