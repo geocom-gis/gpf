@@ -51,8 +51,9 @@ class Where(object):
     Because all methods return a new instance, the user can "daisy chain" multiple statements.
 
     When used in combination with the :py:mod:`gpf.cursors` module, the Where clause can be passed-in directly.
-    In other cases (e.g. *arcpy* tools), the resulting SQL expression is obtained using :func:`str` or :func:`repr`.
-    The latter does not check if the resulting expression is a complete SQL query.
+    In other cases (e.g. *arcpy* tools), the resulting SQL expression is obtained using :func:`str`, :func:`unicode`
+    or :func:`repr`. Note that the first 2 functions check if the resulting expression is a complete SQL query.
+    Since Esri's *arcpy* prefers ``unicode`` text, the :func:`unicode` function is recommended over the :func:`str`.
 
     Example of a simple query:
 
