@@ -41,51 +41,43 @@ FIELDTYPE_MAPPING = {
 }
 
 
-def clone_field(field):
+def get_name(field, uppercase=False):
     """
-    Returns a deep copy (clone) of a Field object.
+    Retrieves the field name from a ``Field`` instance and optionally changes it to uppercase.
 
-    :param field:       The Field instance that should be cloned.
+    :param field:       An :class:`arcpy.Field` instance.
+    :param uppercase:   When ``True`` (default = ``False``), the returned name will be made uppercase.
     :type field:        arcpy.Field
-    :rtype: arcpy.Field
+    :type uppercase:    bool
+    :rtype:             unicode
     """
-    new_field = _arcpy.Field()
-    for attr in (f for f in dir(field) if not f.startswith(_const.CHAR_UNDERSCORE)):
-        value = getattr(field, attr)
-        setattr(new_field, attr, value)
-    return new_field
+    return field.name.upper() if uppercase else field.name
 
 
 def list_fields(obj, names_only=True, uppercase=False):
     """
-    Returns a list of (modified) Field objects or field names for a given list of Field objects or a dataset.
+    Returns a list of Field objects or field names for a given list of Field objects or a dataset.
 
     :param obj:             Dataset path or list of original ``Field`` instances.
     :param names_only:      When ``True`` (default), a list of field names instead of ``Field`` instances is returned.
     :param uppercase:       When ``True`` (default=``False``), the returned field names will be uppercase.
-                            This also applies when *names_only* is set to return ``Field`` instances.
+                            This does **not** apply when *names_only* is ``False`` and ``Field`` instances are returned.
     :type obj:              list, str, unicode
     :type names_only:       bool
     :type uppercase:        bool
     :return:                List of field names or ``Field`` instances.
     :rtype:                 list
     """
+
     # Get field list if input is not a list (or tuple)
     fields = obj
     if not _vld.is_iterable(obj):
         fields = _arcpy.ListFields(obj) or []
 
-    # Set field names to uppercase (on cloned fields, in case an existing field list was input)
-    if uppercase:
-        for i, field in enumerate(fields):
-            field_clone = clone_field(field)
-            field_clone.name = field.name.upper()
-            fields[i] = field_clone
-
-    return [field.name if names_only else field for field in fields]
+    return [get_name(field, uppercase) if names_only else field for field in fields]
 
 
-def missing_fields(table, expected_fields):
+def list_missing(table, expected_fields):
     """
     Returns a list of missing field **names** for a specified table or feature class.
     The expected field names are case-insensitive.
