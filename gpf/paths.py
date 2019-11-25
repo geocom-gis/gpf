@@ -488,7 +488,11 @@ def unqualify(element):
 
     :return:    basestring
     """
-    return element.split(_const.CHAR_DOT)[-1]
+
+    name = _os.path.basename(element)
+    if _const.CHAR_DOT in name:
+        return name.split(_const.CHAR_DOT)[-1]
+    return name
 
 
 class Workspace(Path):
