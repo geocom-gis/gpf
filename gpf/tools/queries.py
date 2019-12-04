@@ -209,15 +209,24 @@ class Where(object):
     @staticmethod
     def _check_types(*args):
         """ Checks that all query values have compatible data types. Applies to IN and BETWEEN operators. """
-        first_val = args[0]
-        first_type = type(first_val)
-        if _vld.is_number(first_val, True):
-            # For now, we will allow a mixture of floats and integers (and bools) in the list of values
-            first_type = (int, float, bool)
-        elif _vld.is_text(first_val):
-            first_type = (str, unicode)
 
-        return all(isinstance(v, first_type) for v in args)
+        # Check that none of the arguments are of type 'object' (this breaks the type check)
+        _vld.raise_if(any(v.__class__ is object for v in args),
+                      ValueError, 'Values of type object are not allowed in IN and BETWEEN queries')
+
+        # Get the first value and get its type
+        sample_val = args[0]
+        sample_type = type(sample_val)
+
+        # Allow for some flexibility concerning numbers and strings
+        if _vld.is_number(sample_val, True):
+            # For now, we will allow a mixture of floats and integers (and bools) in the list of values
+            sample_type = int, float, bool
+        elif _vld.is_text(sample_val):
+            # Allow str and unicode (basestring type sometimes fails with isinstance)
+            sample_type = str, unicode
+
+        return all(isinstance(v, sample_type) for v in args)
 
     def _format_value(self, value):
         """
