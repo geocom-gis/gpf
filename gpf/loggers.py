@@ -401,11 +401,16 @@ class Logger(object):
 
     def _close_handlers(self):
         """ Closes all handlers and clears the log handler list. """
+        if not self._log:
+            # Prevent _close_handlers() method from being executed twice (e.g. by user and by atexit call)
+            return
         for h in self._log.handlers:
+            if hasattr(h, 'flush'):
+                # Flush any outstanding writes
+                h.flush()
             if hasattr(h, 'close'):
                 h.close()
-            elif hasattr(h, 'flush'):
-                h.flush()
+        # Remove handlers
         self._log.handlers = []
 
     def _process_msg(self, level, message, *args, **kwargs):
@@ -573,7 +578,11 @@ class Logger(object):
         """
         Releases the current logger and shuts down the (main) logger.
 
-        :param error_msg:     Optional termination message (or code) for fatal errors.
+        :param error_msg:   Optional termination message (or Exception instance) for fatal errors.
+
+        ..note::            No more logging can take place after this call.
+                            Under normal circumstances, the user does not need to call this method, because it is
+                            automatically being called once the user application has exited.
         """
         if error_msg:
             self.exception(error_msg)
