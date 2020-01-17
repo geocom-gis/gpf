@@ -27,11 +27,11 @@ import tempfile as _tf
 from datetime import datetime as _dt
 from logging import handlers as _handlers
 
-from gpf import arcpy as _arcpy
+import gpf.common.const as _const
 import gpf.common.iterutils as _iter
 import gpf.common.textutils as _tu
-import gpf.common.const as _const
 import gpf.common.validate as _vld
+from gpf import arcpy as _arcpy
 
 _LOGLINE_LENGTH = 80
 _LOGNAME_LENGTH = 15
@@ -405,9 +405,6 @@ class Logger(object):
             # Prevent _close_handlers() method from being executed twice (e.g. by user and by atexit call)
             return
         for h in self._log.handlers:
-            if hasattr(h, 'flush'):
-                # Flush any outstanding writes
-                h.flush()
             if hasattr(h, 'close'):
                 h.close()
         # Remove handlers
@@ -495,6 +492,7 @@ class Logger(object):
         if self._log:
             self._log.exception(message, *args, **kwargs)
         else:
+            # Write to stdout if no logger was initialized (Unlike Python 3, 2.7 can't print to stderr like that)
             print(message)
         self._num_err += 1
 
@@ -502,7 +500,6 @@ class Logger(object):
         """
         Writes a centered message wrapped inside a section line to the log.
         When message exceeds *max_length*, it will be logged as-is.
-        The actual length of the line will be *max_length* - length of logger name.
 
         :param message:         The text to put in the middle of the line (optional).
         :param max_length:      The maximum length of the line.
@@ -511,7 +508,6 @@ class Logger(object):
         :type max_length:       int
         :type symbol:           str
         """
-        max_length -= len(self._log.name)
         msg_length = len(message)
         if msg_length < max_length - 2:
             fill_char = _const.CHAR_SPACE   # default separator between line and message
