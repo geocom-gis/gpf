@@ -93,10 +93,8 @@ def list_missing(table, expected_fields):
     :type expected_fields:  list, tuple
     :rtype:                 list
     """
-    try:
-        table_fields = list_fields(table, True, True)
-    except (RuntimeError, TypeError, ValueError):
-        return expected_fields
+
+    table_fields = list_fields(table, True, True)
 
     desc = None
     missing = []
@@ -120,6 +118,17 @@ def list_missing(table, expected_fields):
             missing.append(f)
 
     return missing
+
+
+def has_field(table, field_name):
+    """
+    Simple wrapper for the :func:`list_missing` function to check if a single field exists.
+
+    :param table:       A full table path.
+    :param field_name:  The name of the field to check for existence.
+    :rtype:             bool
+    """
+    return not list_missing(table, (field_name,))
 
 
 def add_field(dataset, name, template_field=None, alias=None):
