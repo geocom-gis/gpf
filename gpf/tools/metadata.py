@@ -81,7 +81,7 @@ class Describe(object):
 
     def __getattr__(self, name):
         """ Returns the property value of a Describe object item. """
-        return self._get(name)
+        return self.get(name)
 
     def __contains__(self, item):
         """ Checks if a Describe object has the specified property. """
@@ -92,14 +92,6 @@ class Describe(object):
         if self._obj:
             return True
         return False
-
-    def _get(self, name):
-        """ Behaves like the :func:`get` function below, but shows warning if an attribute is missing. """
-        if not hasattr(self._obj, name) and not name.startswith(_const.TEXT_DUNDER):
-            _warn('Describe object of type {} does not have a {} attribute'.
-                  format(_tu.to_repr(self.dataType), _tu.to_repr(name)), Warning)
-            return None
-        return getattr(self._obj, name)
 
     def get(self, name, default=None):
         """
@@ -156,7 +148,6 @@ class Describe(object):
         :rtype: unicode
         """
         if not self:
-            _warn('{} object is empty'.format(_tu.to_repr(Describe.__name__)), Warning)
             return None
 
         return self._obj.dataType
@@ -169,7 +160,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_DATASETTYPE)
+        return self.get(Describe._ATTR_DATASETTYPE)
 
     @property
     def shapeType(self):
@@ -180,7 +171,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(Describe._ATTR_SHAPETYPE)
+        return self.get(Describe._ATTR_SHAPETYPE)
 
     @property
     def fields(self):
@@ -190,7 +181,7 @@ class Describe(object):
 
         :rtype: list
         """
-        return self._get(Describe._ATTR_FIELDS) or []
+        return self.get(Describe._ATTR_FIELDS) or []
 
     @property
     def indexes(self):
@@ -200,7 +191,7 @@ class Describe(object):
 
         :rtype: list
         """
-        return self._get(Describe._ATTR_INDEXES) or []
+        return self.get(Describe._ATTR_INDEXES) or []
 
     def get_fields(self, names_only=True, uppercase=False):
         """
@@ -239,7 +230,7 @@ class Describe(object):
 
         :rtype: arcpy.Extent
         """
-        return self._get(Describe._ATTR_EXTENT) or _arcpy.Extent()
+        return self.get(Describe._ATTR_EXTENT) or _arcpy.Extent()
 
     @property
     def spatialReference(self):
@@ -249,7 +240,7 @@ class Describe(object):
 
         :rtype: arcpy.SpatialReference
         """
-        return self._get(Describe._ATTR_SPATREF) or _arcpy.SpatialReference()
+        return self.get(Describe._ATTR_SPATREF) or _arcpy.SpatialReference()
 
     @property
     def isVersioned(self):
@@ -259,7 +250,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self._get(Describe._ATTR_VERSIONED) or False
+        return self.get(Describe._ATTR_VERSIONED) or False
 
     @property
     def is_pointclass(self):
@@ -368,7 +359,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self._get(Describe._ATTR_ZAWARE) or False
+        return self.get(Describe._ATTR_ZAWARE) or False
 
     @property
     def hasM(self):
@@ -378,7 +369,7 @@ class Describe(object):
 
         :rtype: bool
         """
-        return self._get(Describe._ATTR_MAWARE) or False
+        return self.get(Describe._ATTR_MAWARE) or False
 
     @property
     def globalIDFieldName(self):
@@ -388,7 +379,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_GLOBALID)
+        return self.get(_const.DESC_FIELD_GLOBALID)
 
     @property
     def OIDFieldName(self):
@@ -398,7 +389,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_OID)
+        return self.get(_const.DESC_FIELD_OID)
 
     @property
     def shapeFieldName(self):
@@ -408,7 +399,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_SHAPE)
+        return self.get(_const.DESC_FIELD_SHAPE)
 
     @property
     def lengthFieldName(self):
@@ -418,7 +409,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_LENGTH)
+        return self.get(_const.DESC_FIELD_LENGTH)
 
     @property
     def areaFieldName(self):
@@ -428,7 +419,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_AREA)
+        return self.get(_const.DESC_FIELD_AREA)
 
     @property
     def rasterFieldName(self):
@@ -438,7 +429,7 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_RASTER)
+        return self.get(_const.DESC_FIELD_RASTER)
 
     @property
     def subtypeFieldName(self):
@@ -448,4 +439,4 @@ class Describe(object):
 
         :rtype: unicode
         """
-        return self._get(_const.DESC_FIELD_SUBTYPE)
+        return self.get(_const.DESC_FIELD_SUBTYPE)
