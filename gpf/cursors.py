@@ -95,7 +95,7 @@ class _Row(object):
     def __init__(self, field_map, **kwargs):
         self._fieldmap = field_map
         self._data = kwargs.get('default', _default_tuple(len(field_map)))
-        self._repr = '([])'
+        self._repr = '({})'
 
     def __iter__(self):
         return iter(self._data)
