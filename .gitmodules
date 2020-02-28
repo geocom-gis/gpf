@@ -1,0 +1,4 @@
+[submodule "build/docs"]
+	path = build/docs
+	url = https://github.com/geocom-gis/gpf.git
+	branch = gh-pages
