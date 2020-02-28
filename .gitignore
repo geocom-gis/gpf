@@ -9,5 +9,4 @@
 
 # Setuptools/metadata/Sphinx folders
 /dist/
-/build/
 /*.egg-info
