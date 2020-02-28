@@ -275,8 +275,8 @@ class Editor(_arcpy.da.Editor):
 
         :param save:    If set to ``True``, the edits will be saved.
                         If set to ``False``, the edits will be rolled back (and not saved) when either
-                            (a) the edit session was started with an undo/redo stack, or
-                            (b) the workspace is a versioned SDE database.
+                        (a) the edit session was started with an undo/redo stack, or
+                        (b) the workspace is a versioned SDE database.
                         If the undo stack was disabled (default) and *save* is ``False``, the operation will be aborted.
         """
         if not self.isEditing:
